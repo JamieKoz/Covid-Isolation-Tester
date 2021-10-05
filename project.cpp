@@ -25,7 +25,7 @@ fstream myfile;
 
 // I was unsure how we should set up the db so this is a string to write a template to a file
 // we could use an array, mysql queries, comma separated values, or json format. 
-
+// this can basically be deleted when a database is setup 
 void CreateDatabases()
 {
     myfile.open("patient_detail_database.txt"); 
