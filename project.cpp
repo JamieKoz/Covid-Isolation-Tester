@@ -40,7 +40,10 @@
 #include <string>
 #include <vector> // - MW
 #include <sstream> // - MW
-        
+#include <ctime> // Required for date/time format - MW
+#include <algorithm> //Required for string normalisation
+#include <cctype> //Required for string normalisation
+
 using namespace std; 
 
 /*
@@ -49,6 +52,7 @@ using namespace std;
 * - Might need some pointers for current user, etc as globals so I'll keep things posted.
 * 
 */
+
 //int patientID;
 //string fname;
 //string lname;
@@ -96,7 +100,29 @@ using namespace std;
 //    myfile.close();
 //   
 //}
+void CreateDatabases()
+{
+    myfile.open("patient_detail_database.txt"); 
+    myfile << "Patient Detail Table\n\n"; 
+    myfile <<"Field Name\tData Type\tDescription\nPatient ID\tInteger\nName\tVar Char\tName of the patient\nDate of birth\tInteger\nAddress\tVar Char\nVisited Location\tVar Char\nDate/Timing\tDateTime\nLast overseas travel\tString\tYes/No\nCovid Test\tString\tPositive/Negative\nStatus\tString\tAlive/Dead" <<endl <<endl; 
+    myfile.close();
 
+    myfile.open("symptom_database.txt");  
+    myfile << "Symptom Table\n\n";
+    myfile << "Field Name\tData Type\tDescription\nLow Risk\tVar Char\t Fever, Dry Cough\nMedium Risk\tVar Char\nHigh Risk\tVar char" << endl <<endl;
+    myfile.close();
+
+    myfile.open("location_database.txt");
+    myfile << "High Risk Covid Location\n\n";
+    myfile << "Field Name\tData Type\tDescription\nid\tVar Char\tAuburn Train Station\nid\tVar Char\tRoyal Hotel";
+    myfile.close();
+   
+}
+//needs to be tested if this works
+string NormaliseString(string data){
+    std::transform(data.begin(), data.end(), data.begin(),
+    [](unsigned char c){ return std::tolower(c); });
+}
 
 
 /**
@@ -229,6 +255,33 @@ void UpdateTestStatus()
     //{
     //    cout << "Please select an option 1 or 2." << endl;
     //}
+	
+	int status;
+    cout << "Enter your PatientID:";
+    cin >> patientID;
+    cout << "Enter your covid test status. Enter 1 for positive.\nEnter 2 for Negative.";
+    cin >> status;
+    while(false){
+        if(status == 1)
+        {
+            //update this patient is positive in the db
+
+            //update location database of new high risk location
+            cout << "Enter your visited location:";
+            cin >> visitedLocation; 
+            NormaliseString(visitedLocation);//then normalise visitedLocation to lower
+            true;
+        }
+        else if(status == 2)
+        {
+            //update this patient is negative in the db
+            true;
+        }
+        else
+        {
+            cout << "Please select an option 1 or 2." << endl;
+        }
+    }
 }
 
 
@@ -327,7 +380,6 @@ void CovidTestRecommendationDetails()
     //cin >> visitedLocation;
 
     ////send variables to db
-
 }
 
 
