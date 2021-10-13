@@ -197,25 +197,12 @@ void DisplayUpdatedLocation()
 * - Alow for upper/lower characters
 *
 * (MW - 12/10/21)
-<<<<<<< HEAD
 * - We will need to load in the patient details DB and locations DB as they may required an update
 * - Need to be able to check if ID exists
 * - Update status of test result
 *       -> Add any new locations to locations DB if positive (loop)
 *       -> Check for location duplicates? (might be too much at this stage)
 *
-=======
-* - All DBs required
-* - For patient ID: scan through DB line by line only checking first column (ID)
-*       -> No match proceed / match "This ID exists"
-*       -> Order is not an issue atm
-* - If at High Risk Location with any symptoms, recomend test
-* - If High Risk Symptoms, recomend test
-* - Other symptoms -> "isolate at home" or something like that
-*       -> At least Try 5 more combination from real life scenario (???)
-* - If the Symptom database is empty you should display, "Unable to recommend COVID Test � required data missing".
-* 
->>>>>>> f0909584392bb884951b8e69f1c9fa63ca96fb48
 */
 void UpdateTestStatus()
 {
