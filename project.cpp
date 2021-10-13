@@ -39,7 +39,9 @@
 #include <fstream> 
 #include <string>
 #include <ctime> // Required for date/time format - MW
-        
+#include <algorithm> //Required for string normalisation
+#include <cctype> //Required for string normalisation
+
 using namespace std; 
 
 /*
@@ -57,7 +59,6 @@ string visitedLocation;
 int date;
 string overseasTravel;
 string covidTest;
-string status;
 
 fstream myfile; 
 
@@ -96,7 +97,11 @@ void CreateDatabases()
     myfile.close();
    
 }
-
+//needs to be tested if this works
+string NormaliseString(string data){
+    std::transform(data.begin(), data.end(), data.begin(),
+    [](unsigned char c){ return std::tolower(c); });
+}
 
 
 /**
@@ -144,6 +149,7 @@ void DisplayUpdatedLocation()
 */
 void UpdatePatientDetails()
 {
+    int status;
     //get by patientID or name
     cout << "Enter your address:";
     cin >> address;
@@ -256,29 +262,33 @@ void CovidTestRecommendationDetails()
 */
 void UpdateTestStatus()
 {
-    int var;
+    int status;
     cout << "Enter your PatientID:";
     cin >> patientID;
-    cout << "Enter your covid test status:";
+    cout << "Enter your covid test status. Enter 1 for positive.\nEnter 2 for Negative.";
     cin >> status;
-    cout << "Enter your visited location:";
-    cin >> visitedLocation;
-    cout << "Enter 1 for positive.\nEnter 2 for Negative.";
-    cin >> var;
-    if(var == 1)
-    {
-        //update this patient is positive in the db
-        //update location database of new high risk location
+    while(false){
+        if(status == 1)
+        {
+            //update this patient is positive in the db
 
+            //update location database of new high risk location
+            cout << "Enter your visited location:";
+            cin >> visitedLocation; 
+            NormaliseString(visitedLocation);//then normalise visitedLocation to lower
+            true;
+        }
+        else if(status == 2)
+        {
+            //update this patient is negative in the db
+            true;
+        }
+        else
+        {
+            cout << "Please select an option 1 or 2." << endl;
+        }
     }
-    else if(var == 2)
-    {
-        //update this patient is negative in the db
-    }
-    else
-    {
-        cout << "Please select an option 1 or 2." << endl;
-    }
+
 }
 
 
