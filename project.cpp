@@ -3,10 +3,10 @@
 * 
 * File:             project.cpp (should be renamed, can do later)
 * 
-* Aurthors:         Kozminska, Jamie - S/N
+* Aurthors:         Kozminska, Jamie - 101114436
 *                   Woodrow, Michael - 6798527
 * 
-* Created:          Date this was created?
+* Created:          05/10/21
 * 
 * Last Modified:    12/10/2021
 * 
@@ -68,7 +68,7 @@ using namespace std;
 * @param none
 * @returns nothing
 * 
-* (JK - ??/10/21)
+* (JK - 5/10/21)
 * I was unsure how we should set up the db so this is a string to write a template to a file
 * we could use an array, mysql queries, comma separated values, or json format. 
 * this can basically be deleted when a database is setup
@@ -197,12 +197,25 @@ void DisplayUpdatedLocation()
 * - Alow for upper/lower characters
 *
 * (MW - 12/10/21)
+<<<<<<< HEAD
 * - We will need to load in the patient details DB and locations DB as they may required an update
 * - Need to be able to check if ID exists
 * - Update status of test result
 *       -> Add any new locations to locations DB if positive (loop)
 *       -> Check for location duplicates? (might be too much at this stage)
 *
+=======
+* - All DBs required
+* - For patient ID: scan through DB line by line only checking first column (ID)
+*       -> No match proceed / match "This ID exists"
+*       -> Order is not an issue atm
+* - If at High Risk Location with any symptoms, recomend test
+* - If High Risk Symptoms, recomend test
+* - Other symptoms -> "isolate at home" or something like that
+*       -> At least Try 5 more combination from real life scenario (???)
+* - If the Symptom database is empty you should display, "Unable to recommend COVID Test � required data missing".
+* 
+>>>>>>> f0909584392bb884951b8e69f1c9fa63ca96fb48
 */
 void UpdateTestStatus()
 {
