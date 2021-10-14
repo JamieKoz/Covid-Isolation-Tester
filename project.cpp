@@ -212,62 +212,130 @@ void DisplayUpdatedLocation()
 * - Update status of test result
 *       -> Add any new locations to locations DB if positive (loop)
 *       -> Check for location duplicates? (might be too much at this stage)
-*
 */
+
+/** (JK - 14/10/21) - UpdateTestStatus() info
+Thus far I have the user input their patientID which we fetch from the database.
+Then I get their input of status(positive or negative).
+We know that their test status in the database is at index 9.
+Retrieving each row, splitting at commas, we retrieve the 9th index.
+We then write into their status positive or negative depending what they chose (1 or 2)
+If they were positive, then we get their input of visitedLocations
+So far I have just appended it to the database, duplicates arent checked at this stage. 
+
+Things to fix:
+-menu option selections and loopings need to function properly (high risk locations option is being reached)
+- menu option when input is a char it still continues
+-database needs to print on newlines
+
+**/
 void UpdateTestStatus()
 {
-    //int var;
-    //cout << "Enter your PatientID:";
-    //cin >> patientID;
-    //cout << "Enter your covid test status:";
-    //cin >> status;
-    //cout << "Enter your visited location:";
-    //cin >> visitedLocation;
-    //cout << "Enter 1 for positive.\nEnter 2 for Negative.";
-    //cin >> var;
-    //if(var == 1)
-    //{
-    //    //update this patient is positive in the db
-    //    //update location database of new high risk location
+    fstream ifileCheckPatientDB, fout;
+    //opens existing record
+    ifileCheckPatientDB.open("patientDB.txt", ios::in);
+    fout.open("patientDBnew.txt", ios::out);
+    int patientID, selection;
+    string getRowLine, getRowVar, updatedStatus;
+    string visitedLocation;
+    vector<string> tempRow;
+    
 
-    //}
-    //else if(var == 2)
-    //{
-    //    //update this patient is negative in the db
-    //}
-    //else
-    //{
-    //    cout << "Please select an option 1 or 2." << endl;
-    //}
-	
-	int status;
-    cout << "Enter your PatientID:";
-    //cin >> patientID;
-    cout << "Enter your covid test status. Enter 1 for positive.\nEnter 2 for Negative.";
-    cin >> status;
-    while(false){
-        if(status == 1)
+    int indexOfTestStatus = 9; //index of test in csv file
+    int count = 0, i;
+    // get patient id from user
+    cout << "Enter your Patient ID:";
+    cin >> patientID;
+    //get data to be updated
+    cout << "Enter test status." << endl;
+    cout << "Enter 1 for positive.\nEnter 2 for Negative.";
+    cin >> selection;
+    while(selection != 1)
+    {
+        while (!(cin >> selection))
         {
-            //update this patient is positive in the db
-
-            //update location database of new high risk location
-            cout << "Enter your visited location:";
-           // cin >> visitedLocation; 
-            //NormaliseString(visitedLocation);//then normalise visitedLocation to lower
-            true;
+            cin.clear();
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            cout << "\nInvalid input.\n\nPlease enter the number of the option you wish to select.\n1: Positive\n2: Negative" << endl;
+            cout << "\n>> ";
         }
-        else if(status == 2)
+        switch(selection)
         {
-            //update this patient is negative in the db
-            true;
-        }
-        else
-        {
-            cout << "Please select an option 1 or 2." << endl;
+            case 1:
+                //update this patient is positive in the db
+                updatedStatus = "Positive";
+                cout << "Enter your visited location:" << endl;
+                cin >> visitedLocation;
+                break;
+            case 2:
+                //update this patient is negative in the db
+                updatedStatus = "Negative";
+                break;
+            default:
+                cout << "Unknown selection, please try again.\n" << endl;
         }
     }
-}
 
+    getline(ifileCheckPatientDB, getRowLine); 
+    while (getline(ifileCheckPatientDB, getRowLine))
+    { 
+        tempRow.clear();
+        stringstream ss(getRowLine); // Splits Row into "Columns" (RowVar)
+
+        // word variable is storing the column data of a row
+        while (getline(ss, getRowVar, ','))
+        {
+            tempRow.push_back(getRowVar);
+        }
+        int compareID = stoi(tempRow[0]);
+        int row_size = tempRow.size();
+        if(compareID == patientID)
+        {
+            count = 1;
+            stringstream convert;
+            convert << updatedStatus;
+            tempRow[indexOfTestStatus] = convert.str();
+            if(!ifileCheckPatientDB.eof())
+            {
+                for(i=0; i < row_size - 1; i++ )
+                {
+                    //write the updated data to new file 
+                    fout << tempRow[i] << ", ";
+                }
+                fout << tempRow[row_size - 1] << "\n";
+            }
+        }
+        else 
+        {
+            if(!ifileCheckPatientDB.eof())
+            {
+                for (i = 0; i < row_size - 1; i++) 
+                {
+                    fout << tempRow[i] << ", ";
+                }
+            }
+        }
+        if(ifileCheckPatientDB.eof())
+        {
+            break;
+        }
+    }
+    if(count == 0)
+    {
+        cout << "[] - The database is empty.";
+    }
+        
+    //update location database of new high risk location
+    fstream ifileAddHighRiskLocations;
+    ifileAddHighRiskLocations.open("highRiskLocationsDB.txt");
+    ifileAddHighRiskLocations << visitedLocation << ", ";
+    ifileCheckPatientDB.close();
+    fout.close();
+    remove("database.txt"); //removing the previous database, then renaming the newly written and changing its name to replace the old.
+    rename("patientDBnew.txt", "patientDBnew1"); // this must be changed if it works to "patientDB.txt"
+
+
+}
 
 
 /**
@@ -290,7 +358,7 @@ void UpdateTestStatus()
 * - If High Risk Symptoms, recomend test
 * - Other symptoms -> "isolate at home" or something like that
 *       -> At least Try 5 more combination from real life scenario (???)
-* - If the Symptom database is empty you should display, "Unable to recommend COVID Test – required data missing".
+* - If the Symptom database is empty you should display, "Unable to recommend COVID Test ï¿½ required data missing".
 *
 */
 void CovidTestRecommendationDetails()
