@@ -44,7 +44,9 @@
 #include <algorithm> //Required for string normalisation
 #include <cctype> //Required for string normalisation
 
-using namespace std; 
+using namespace std;
+
+const int MAX_YEAR = 2021; // Manually update each year
 
 /*
 * (MW - 12/10/21)
@@ -100,29 +102,11 @@ using namespace std;
 //    myfile.close();
 //   
 //}
-void CreateDatabases()
-{
-    myfile.open("patient_detail_database.txt"); 
-    myfile << "Patient Detail Table\n\n"; 
-    myfile <<"Field Name\tData Type\tDescription\nPatient ID\tInteger\nName\tVar Char\tName of the patient\nDate of birth\tInteger\nAddress\tVar Char\nVisited Location\tVar Char\nDate/Timing\tDateTime\nLast overseas travel\tString\tYes/No\nCovid Test\tString\tPositive/Negative\nStatus\tString\tAlive/Dead" <<endl <<endl; 
-    myfile.close();
 
-    myfile.open("symptom_database.txt");  
-    myfile << "Symptom Table\n\n";
-    myfile << "Field Name\tData Type\tDescription\nLow Risk\tVar Char\t Fever, Dry Cough\nMedium Risk\tVar Char\nHigh Risk\tVar char" << endl <<endl;
-    myfile.close();
-
-    myfile.open("location_database.txt");
-    myfile << "High Risk Covid Location\n\n";
-    myfile << "Field Name\tData Type\tDescription\nid\tVar Char\tAuburn Train Station\nid\tVar Char\tRoyal Hotel";
-    myfile.close();
-   
-}
 //needs to be tested if this works
-string NormaliseString(string data){
-    std::transform(data.begin(), data.end(), data.begin(),
-    [](unsigned char c){ return std::tolower(c); });
-}
+//string NormaliseString(string data){
+//    std::transform(data.begin(), data.end(), data.begin(),[](unsigned char c){ return std::tolower(c); });
+//}
 
 
 /**
@@ -258,7 +242,7 @@ void UpdateTestStatus()
 	
 	int status;
     cout << "Enter your PatientID:";
-    cin >> patientID;
+    //cin >> patientID;
     cout << "Enter your covid test status. Enter 1 for positive.\nEnter 2 for Negative.";
     cin >> status;
     while(false){
@@ -268,8 +252,8 @@ void UpdateTestStatus()
 
             //update location database of new high risk location
             cout << "Enter your visited location:";
-            cin >> visitedLocation; 
-            NormaliseString(visitedLocation);//then normalise visitedLocation to lower
+           // cin >> visitedLocation; 
+            //NormaliseString(visitedLocation);//then normalise visitedLocation to lower
             true;
         }
         else if(status == 2)
@@ -311,61 +295,133 @@ void UpdateTestStatus()
 */
 void CovidTestRecommendationDetails()
 {
-    int     patientID;
-    cout << "Enter your patient ID:";
-    cin >> patientID; // if patientID already exists then cant send to db
-
-    ifstream ifileCheckPatientDB;
-    ifileCheckPatientDB.open("patientDB.txt");
-    if (ifileCheckPatientDB.fail())
+    int patientID;
+    bool allowContinue = false;
+    while (!allowContinue)
     {
-        cout << "\nPatient Database Missing!\nPlease contact the application administrator on 555-123-456" << endl;
-        cout << "\nReturning to main menu.\n" << endl;
-        return;
-    }
-
-    if (ifileCheckPatientDB.is_open())
-    {
-        string getRowLine,getRowVar;
-        vector<string> tempRow;
-        int compareID;
-
-        getline(ifileCheckPatientDB, getRowLine); // First row redundant - Might be a better method (replace this if so)
-        while (getline(ifileCheckPatientDB, getRowLine))
+        patientID = NULL;
+        cout << "\nEnter your patient ID (numbers only, no spaces): ";
+        while (!(cin >> patientID)) // Prevents invalid inputs like letters, etc - MW
         {
-            tempRow.clear(); // Memory Management - Clears last row saved
+            cin.clear();
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            cout << "\nInvalid input.\n\nEnter your patient ID (numbers only, no spaces): ";
+        }
 
-            stringstream ss(getRowLine); // Splits Row into "Columns" (RowVar)
+ifstream ifileCheckPatientDB; // if patientID already exists then cant send to db
+ifileCheckPatientDB.open("patientDB.txt");
+if (ifileCheckPatientDB.fail())
+{
+    cout << "\nPatient Database Missing!\nPlease contact the application administrator on 555-123-456" << endl;
+    cout << "\nReturning to main menu.\n" << endl;
+    return;
+}
 
-            while (getline(ss,getRowVar,','))
+if (ifileCheckPatientDB.is_open())
+{
+    string getRowLine, getRowVar;
+    vector<string> tempRow;
+    int compareID;
+
+    allowContinue = true; // Will allow function to continue so long as patient ID does not exist
+
+    getline(ifileCheckPatientDB, getRowLine); // First row redundant - Might be a better method (replace this if so)
+    while (getline(ifileCheckPatientDB, getRowLine))
+    {
+        tempRow.clear(); // Memory Management - Clears previous line get
+
+        stringstream ss(getRowLine); // Splits Row into "Columns" (RowVar)
+
+        while (getline(ss, getRowVar, ','))
+        {
+            tempRow.push_back(getRowVar);
+        }
+
+        compareID = stoi(tempRow[0]);
+
+        if (compareID == patientID)
+        {
+            allowContinue = false;
+
+            int selection(0);
+            cout << "\nPatient ID already exists.\nPlease enter the number of the option you wish to select.\n1: Try again\n2: Return to main menu" << endl;
+            cout << "\n>> ";
+            while (selection != 1)
             {
-                tempRow.push_back(getRowVar);
-            }
+                while (!(cin >> selection)) // Prevents invalid inputs like letters, etc - MW
+                {
+                    cin.clear();
+                    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+                    cout << "\nInvalid input.\n\nPlease enter the number of the option you wish to select.\n1: Try again\n2: Return to main menu" << endl;
+                    cout << "\n>> ";
+                }
+                switch (selection)
+                {
+                case 1:
+                    ifileCheckPatientDB.close();
+                    break;
 
-            compareID = stoi(tempRow[0]);
+                case 2:
+                    ifileCheckPatientDB.close();
+                    return;
 
-            if (compareID == patientID)
-            {
-                cout << "match!" << endl;
-                break;
+                default:
+                    cout << "Unknown selection, please try again.\n" << endl;
+                }
             }
-            
         }
     }
+}
+ifileCheckPatientDB.close();
+    }
+
+    // New patient - Allow details to be entered and then store data on a new line of the patient DB.
+    char firstName[100], lastName[100], address[100], visitedLocation[100];
+    int dayDOB, monthDOB, yearDOB;
+    time_t dateLocationVisited;
+    string overseasTravel;
+
+    cout << "\nPlease enter your first name: "; // Remove commas
+    cin.ignore();
+    cin.getline(firstName, 100);
+
+    cout << "\nPlease enter your last name: ";
+    cin.getline(lastName, 100);
+
+    cout << "\nWhat is your date of birth (format: dd/mm/yyyy): ";
+    allowContinue = false;
+    while (!allowContinue)
+    {
+        string temp;
+        getline(cin, temp);
+        dayDOB = stoi(temp.substr(0, 2));
+        monthDOB = stoi(temp.substr(3, 5));
+        yearDOB = stoi(temp.substr(6, 10));
+
+        if ((yearDOB > 1900 && yearDOB < MAX_YEAR) && (monthDOB >= 1 && monthDOB <= 12) && (dayDOB >= 1 && dayDOB <= 31))
+        {
+            if ((monthDOB == 4 || monthDOB == 6 || monthDOB == 9 || monthDOB == 11) && (dayDOB < 31)) // Max days = 30
+            {
+                
+            }
+            if (monthDOB == 2)
+            {
+                if ((yearDOB % 4 == 0 && dayDOB <= 29) || (yearDOB % 4 != 0 && dayDOB <= 28)) // Check leap year
+                {
+                    allowContinue = true;
+                }
+
+            }
+        }
+        else
+        {
+            cout << "Invalid date. Please try again (format: dd/mm/yyyy): ";
+        }
+    }
+
     
 
 
-
-
-
-    //cout << "Enter your First name:";
-    //cin >> fname;
-
-    //cout << "Enter your Family name:";
-    //cin >> lname;
-
-    //cout << "Enter your Date of birth:";
-    //cin >> doB;
 
     //cout << "Enter your address:";
     //cin >> address;
@@ -383,6 +439,21 @@ void CovidTestRecommendationDetails()
 }
 
 
+/**
+* Simple function to print out the main menu instructions
+* @param none
+* @returns none
+*/
+void PrintMainMenu()
+{
+    cout << "1: Enter your details for COVID-Test Recommendation" << endl;
+    cout << "2: Submit your Covid test status & Update the location database" << endl;
+    cout << "3: Display the updated location (High Risk for COVID)" << endl;
+    cout << "4: Update COVID Patient Details" << endl;
+    cout << "5: Display the COVID Positive patient details" << endl;
+    cout << "6: Quit" << endl;
+    cout << "\n>> ";
+}
 
 /**
 * Main display loop that the user navigates through
@@ -400,50 +471,47 @@ void DisplayMenu()
 
     while(selection != 6)
     {
-        cout << "1: Enter your details for COVID-Test Recommendation" << endl;
-        cout << "2: Submit your Covid test status & Update the location database" << endl;
-        cout << "3: Display the updated location (High Risk for COVID)" << endl;
-        cout << "4: Update COVID Patient Details" << endl;
-        cout << "5: Display the COVID Positive patient details" << endl;
-        cout << "6: Quit" << endl;
-        cout << "\n>> ";
+        cout << "Please enter the number of the option you wish to select.\n" << endl;
+        PrintMainMenu();
 
-        cin >> selection;
-
-        if(!isalpha(selection))
+        while (!(cin >> selection)) // Prevents invalid inputs like letters, etc - MW
         {
-            switch (selection)
-            {
-                case 1: 
-                    CovidTestRecommendationDetails();
-                    break;
+            cin.clear();
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            cout << "\nInvalid input. Please try again.\n" << endl;;
+            PrintMainMenu();
+        }
+        switch (selection)
+        {
+            case 1: 
+                CovidTestRecommendationDetails();
+                break;
 
-                case 2:
-                    UpdateTestStatus();
-                    break;
+            case 2:
+                UpdateTestStatus();
+                break;
 
-                case 3:
-                    DisplayUpdatedLocation();
-                    break;
+            case 3:
+                DisplayUpdatedLocation();
+                break;
 
-                case 4:
-                    UpdatePatientDetails();
-                    break;
+            case 4:
+                UpdatePatientDetails();
+                break;
 
-                case 5:
-                    DisplayPositivePatients();
-                    break;
+            case 5:
+                DisplayPositivePatients();
+                break;
 
-                case 6:
-                    break;
+            case 6:
+                break;
 
-                default: 
-                    cout << "Unknown selection, please try again" << endl;
-            }
+            default: 
+                cout << "Unknown selection, please try again.\n" << endl;
         }
   
     } 
-    cout << "Goodbye" << endl;
+    cout << "\nGoodbye" << endl;
 }
 
 
