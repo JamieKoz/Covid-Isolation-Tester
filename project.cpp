@@ -43,10 +43,21 @@
 #include <ctime> // Required for date/time format - MW
 #include <algorithm> //Required for string normalisation
 #include <cctype> //Required for string normalisation
+#include<regex> // - MW
 
 using namespace std;
 
-const int MAX_YEAR = 2021; // Manually update each year
+const int MAX_CHAR_ARRAY_LENGTH = 100;
+const int MAX_YEAR = 2021; // Manually update each year - MW
+const int MAX_CYCLES = 10; // Max amount of trys until a force quit - MW
+const int SYMPTOMS_LEVEL = 3; // [1] Low, [2] Med, [3] High - MW
+
+const regex CORRECT_DATE_FORMAT{ "\\b\\d{2}[/]\\d{2}[/]\\d{4}\\b" }; // dd/mm/yyyy
+const regex CORRECT_TIME_FORMAT{ "\\b^(0[1-9]|1[0-2]):([0-5]\\d)\\s?((?:[Aa]|[Pp])\\.?[Mm]\\.?)$\\b" }; // hh:mm am|pm
+const regex CORRECT_YES_NO_FORMAT{ "\\b[y|Y][e|E]?[s|S]?|[n|N][o|O]?\\b" }; // yes or no
+const regex CORRECT_YES_FORMAT{ "\\b[y|Y][e|E]?[s|S]?\\b" }; // yes
+const regex CORRECT_ALPHA_FORMAT{ "\\b[a-zA-Z]\\b" }; // letters only
+const regex CORRECT_ADDRESS_FORMAT{ "\\b[a-zA-Z0-9\\s/]\\b" }; // letters, numbers, slashes, and spaces only (NO COMMAS)
 
 /*
 * (MW - 12/10/21)
@@ -270,6 +281,109 @@ void UpdateTestStatus()
 
 
 
+
+
+
+/**
+* Checks if interupt is required
+* @param ...
+* @returns ...
+*/
+bool checkInterupt(int& count)
+{
+    count++;
+    if (count == MAX_CYCLES)
+    {
+        cout << "\nToo many invalid inputs.\nReturning to main menu.\n" << endl;
+        return true;
+    }
+    return false;
+}
+/**
+* Checks to make sure the answer is yes or no
+* @param ...
+* @returns ...
+*/
+bool checkYesNoValid(string& answer)
+{
+    cin.clear();
+    getline(cin, answer);
+    if (!regex_match(answer, CORRECT_YES_NO_FORMAT))
+    {
+        cout << "Please try again (yes or no): ";
+        return false;
+    }
+    return true;
+}
+/**
+* Checks to make sure the date is formatted correctly
+* @param ...
+* @returns ...
+*/
+bool checkDateValid(string& date)
+{
+    cin.clear();
+    int dayDOB, monthDOB, yearDOB;
+    while (!regex_match(date, CORRECT_DATE_FORMAT))
+    {
+        getline(cin, date);
+        if (!regex_match(date, CORRECT_DATE_FORMAT))
+        {
+            cout << "Please try again (format: dd/mm/yyyy): ";
+        }
+    }
+    dayDOB = stoi(date.substr(0, 2));
+    monthDOB = stoi(date.substr(3, 5));
+    yearDOB = stoi(date.substr(6, 10));
+
+    if ((yearDOB > 1900 && yearDOB < MAX_YEAR) && (monthDOB >= 1 && monthDOB <= 12) && (dayDOB >= 1 && dayDOB <= 31))
+    {
+        if (((monthDOB == 4 || monthDOB == 6 || monthDOB == 9 || monthDOB == 11) && dayDOB < 31)               // IF (Months with 30 max days)
+            || (monthDOB != 2)                                                                                 // OR (Not Febuary)
+            || (monthDOB == 2 && ((yearDOB % 4 == 0 && dayDOB <= 29) || (yearDOB % 4 != 0 && dayDOB <= 28))))  // OR (Check leap year)
+        {
+            return true;
+        }
+    }
+    cout << "Invalid date. Please try again (format: dd/mm/yyyy): ";
+    return false;
+}
+/**
+* Checks an array of Char values to make sure it contains only letters
+* @param ...
+* @returns ...
+*/
+bool checkCharArrayValid(char(&charArray)[MAX_CHAR_ARRAY_LENGTH])
+{
+    cin.clear();
+    cin.getline(charArray, MAX_CHAR_ARRAY_LENGTH);
+    for (int i = 0; i < MAX_CHAR_ARRAY_LENGTH; i++)
+    {
+        if (!isalpha(charArray[i]) && charArray[i] != '\0')
+        {
+            return false;
+        }
+    }
+    return true;
+}
+/**
+* Checks an address to make sure it only contains valid characters (no commas)
+* @param ...
+* @returns ...
+*/
+bool checkAddressValid(char(&charArray)[MAX_CHAR_ARRAY_LENGTH])
+{
+    cin.clear();
+    cin.getline(charArray, MAX_CHAR_ARRAY_LENGTH);
+    for (int i = 0; i < MAX_CHAR_ARRAY_LENGTH; i++)
+    {
+        if (charArray[i] == ',')
+        {
+            charArray[i] = ' ';
+        }
+    }
+    return true;
+}
 /**
 * OPTION 1: Takes in new user info, stores info to DB, and also recommends if user needs a test
 * @param ...
@@ -295,147 +409,256 @@ void UpdateTestStatus()
 */
 void CovidTestRecommendationDetails()
 {
-    int patientID;
-    bool allowContinue = false;
+    int patientID, interuptCount(0);
+    bool allowContinue(false), highRiskLocAnswer(false), symptomsAnswers[3]{false};
+    char firstName[MAX_CHAR_ARRAY_LENGTH]{ 0 }, lastName[MAX_CHAR_ARRAY_LENGTH]{ 0 }, address[MAX_CHAR_ARRAY_LENGTH]{ 0 };
+    string patientDOB, overseasTravel, testResult;
+
     while (!allowContinue)
     {
-        patientID = NULL;
         cout << "\nEnter your patient ID (numbers only, no spaces): ";
         while (!(cin >> patientID)) // Prevents invalid inputs like letters, etc - MW
         {
+            if (checkInterupt(interuptCount)) { return; }
             cin.clear();
             cin.ignore(numeric_limits<streamsize>::max(), '\n');
             cout << "\nInvalid input.\n\nEnter your patient ID (numbers only, no spaces): ";
         }
 
-ifstream ifileCheckPatientDB; // if patientID already exists then cant send to db
-ifileCheckPatientDB.open("patientDB.txt");
-if (ifileCheckPatientDB.fail())
-{
-    cout << "\nPatient Database Missing!\nPlease contact the application administrator on 555-123-456" << endl;
-    cout << "\nReturning to main menu.\n" << endl;
-    return;
-}
-
-if (ifileCheckPatientDB.is_open())
-{
-    string getRowLine, getRowVar;
-    vector<string> tempRow;
-    int compareID;
-
-    allowContinue = true; // Will allow function to continue so long as patient ID does not exist
-
-    getline(ifileCheckPatientDB, getRowLine); // First row redundant - Might be a better method (replace this if so)
-    while (getline(ifileCheckPatientDB, getRowLine))
-    {
-        tempRow.clear(); // Memory Management - Clears previous line get
-
-        stringstream ss(getRowLine); // Splits Row into "Columns" (RowVar)
-
-        while (getline(ss, getRowVar, ','))
+        ifstream ifilePatientDB; // if patientID already exists then cant send to db
+        ifilePatientDB.open("patientDB.txt");
+        if (ifilePatientDB.fail())
         {
-            tempRow.push_back(getRowVar);
+            cout << "\nPatient Database Missing!\nPlease contact the application administrator on 555-123-456" << endl;
+            cout << "\nReturning to main menu.\n" << endl;
+            return;
         }
 
-        compareID = stoi(tempRow[0]);
-
-        if (compareID == patientID)
+        if (ifilePatientDB.is_open())
         {
-            allowContinue = false;
+            string getRowLine, getRowVar;
+            vector<string> tempRow;
+            int compareID;
 
-            int selection(0);
-            cout << "\nPatient ID already exists.\nPlease enter the number of the option you wish to select.\n1: Try again\n2: Return to main menu" << endl;
-            cout << "\n>> ";
-            while (selection != 1)
+            allowContinue = true; // Will allow function to continue so long as patient ID does not exist
+
+            getline(ifilePatientDB, getRowLine); // First row redundant - Might be a better method (replace this if so)
+            while (getline(ifilePatientDB, getRowLine))
             {
-                while (!(cin >> selection)) // Prevents invalid inputs like letters, etc - MW
+                tempRow.clear(); // Memory Management - Clears previous line get
+
+                stringstream ss(getRowLine); // Splits Row into "Columns" (RowVar)
+
+                while (getline(ss, getRowVar, ','))
                 {
-                    cin.clear();
-                    cin.ignore(numeric_limits<streamsize>::max(), '\n');
-                    cout << "\nInvalid input.\n\nPlease enter the number of the option you wish to select.\n1: Try again\n2: Return to main menu" << endl;
-                    cout << "\n>> ";
+                    tempRow.push_back(getRowVar);
                 }
-                switch (selection)
+
+                compareID = stoi(tempRow[0]);
+
+                if (compareID == patientID)
                 {
-                case 1:
-                    ifileCheckPatientDB.close();
-                    break;
+                    allowContinue = false;
 
-                case 2:
-                    ifileCheckPatientDB.close();
-                    return;
+                    int selection(0);
+                    cout << "\nPatient ID already exists.\nPlease enter the number of the option you wish to select.\n1: Try again\n2: Return to main menu" << endl;
+                    cout << "\n>> ";
+                    interuptCount = 0;
+                    while (selection != 1)
+                    {
+                        if (checkInterupt(interuptCount)) { return; }
+                        while (!(cin >> selection)) // Prevents invalid inputs like letters, etc - MW
+                        {
+                            cin.clear();
+                            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+                            cout << "\nInvalid input.\n\nPlease enter the number of the option you wish to select.\n1: Try again\n2: Return to main menu" << endl;
+                            cout << "\n>> ";
+                        }
+                        switch (selection)
+                        {
+                        case 1:
+                            ifilePatientDB.close();
+                            break;
 
-                default:
-                    cout << "Unknown selection, please try again.\n" << endl;
+                        case 2:
+                            ifilePatientDB.close();
+                            return;
+
+                        default:
+                            cout << "Unknown selection, please try again.\n" << endl;
+                        }
+                    }
                 }
             }
         }
-    }
-}
-ifileCheckPatientDB.close();
+        ifilePatientDB.close();
     }
 
     // New patient - Allow details to be entered and then store data on a new line of the patient DB.
-    char firstName[100], lastName[100], address[100], visitedLocation[100];
-    int dayDOB, monthDOB, yearDOB;
-    time_t dateLocationVisited;
-    string overseasTravel;
-
-    cout << "\nPlease enter your first name: "; // Remove commas
+    cout << "\nPlease enter your first name (letters only, no spaces): ";
     cin.ignore();
-    cin.getline(firstName, 100);
+    interuptCount = 0;
+    while (!checkCharArrayValid(firstName))
+    {
+        if (checkInterupt(interuptCount)) { return; }
+        cout << "Please try again (letters only, no spaces): ";
+    }
 
-    cout << "\nPlease enter your last name: ";
-    cin.getline(lastName, 100);
+
+    cout << "\nPlease enter your last name (letters only, no spaces): ";
+    interuptCount = 0;
+    while (!checkCharArrayValid(lastName))
+    {
+        if (checkInterupt(interuptCount)) { return; }
+        cout << "Please try again (letters only, no spaces): ";
+    }
 
     cout << "\nWhat is your date of birth (format: dd/mm/yyyy): ";
-    allowContinue = false;
-    while (!allowContinue)
+    interuptCount = 0;
+    while (!checkDateValid(patientDOB))
     {
-        string temp;
-        getline(cin, temp);
-        dayDOB = stoi(temp.substr(0, 2));
-        monthDOB = stoi(temp.substr(3, 5));
-        yearDOB = stoi(temp.substr(6, 10));
+        if (checkInterupt(interuptCount)) { return; }
+    }
 
-        if ((yearDOB > 1900 && yearDOB < MAX_YEAR) && (monthDOB >= 1 && monthDOB <= 12) && (dayDOB >= 1 && dayDOB <= 31))
+    cout << "\nPlease enter your address (no commas): ";
+    interuptCount = 0;
+    while (!checkAddressValid(address))
+    {
+        if (checkInterupt(interuptCount)) { return; }
+    }
+
+    cout << "\nHave you travelled overseas in the last 6 months (yes or no)?: ";
+    interuptCount = 0;
+    while (!checkYesNoValid(overseasTravel))
+    {
+        if (checkInterupt(interuptCount)) { return; }
+    }
+
+    ifstream ifileHighRiskLocDB;
+    ifileHighRiskLocDB.open("highRiskLocationsDB.txt");
+    if (ifileHighRiskLocDB.fail())
+    {
+        cout << "\nHigh Risk Location Database Missing!\nPlease contact the application administrator on 555-123-456" << endl;
+        cout << "\nA test can still be recomended, but it will be less accurate.\n" << endl;
+    }
+
+    if (ifileHighRiskLocDB.is_open())
+    {
+        string getRowLine, atLocationAnswer;
+
+        while (getline(ifileHighRiskLocDB, getRowLine))
         {
-            if ((monthDOB == 4 || monthDOB == 6 || monthDOB == 9 || monthDOB == 11) && (dayDOB < 31)) // Max days = 30
+            cout << "\nHave you recently visited this location -> ";
+            cout << getRowLine;
+            cout << " (yes or no)?: ";
+            interuptCount = 0;
+            while (!checkYesNoValid(atLocationAnswer))
             {
-                
+                if (checkInterupt(interuptCount)) { return; }
             }
-            if (monthDOB == 2)
+            if (regex_match(atLocationAnswer, CORRECT_YES_FORMAT))
             {
-                if ((yearDOB % 4 == 0 && dayDOB <= 29) || (yearDOB % 4 != 0 && dayDOB <= 28)) // Check leap year
-                {
-                    allowContinue = true;
-                }
+                highRiskLocAnswer = true;
+                break;
+            }
+        }
+    }
+    ifileHighRiskLocDB.close();
 
+
+    ifstream ifileSymptomsDB;
+    ifileSymptomsDB.open("symptomsDB.txt");
+    if (ifileSymptomsDB.fail())
+    {
+        cout << "\nSymptoms Database Missing!\nPlease contact the application administrator on 555-123-456" << endl;
+        cout << "\nA test can not be recomended at this stage.\n" << endl;
+    }
+
+    if (ifileSymptomsDB.is_open())
+    {
+        string getRowLine, symptomsAnswer;
+        int count = 0;
+
+        while (getline(ifileSymptomsDB, getRowLine) && count < SYMPTOMS_LEVEL)
+        {
+            if (getRowLine.empty())
+            {
+                cout << "\nUnable to recommend COVID Test – required data missing" << endl; // As required - MW
+                return;
+            }
+            cout << "\nHave you had any of these symptoms -> ";
+            cout << getRowLine;
+            cout << " (yes or no)?: ";
+            interuptCount = 0;
+            while (!checkYesNoValid(symptomsAnswer))
+            {
+                if (checkInterupt(interuptCount)) { return; }
+            }
+            if (regex_match(symptomsAnswer, CORRECT_YES_FORMAT))
+            {
+                symptomsAnswers[count] = true;
+            }
+            count++;
+        }
+    }
+    ifileSymptomsDB.close();
+
+    // No symptoms, no high risk locations
+    if (!highRiskLocAnswer && !symptomsAnswers[2])
+    {
+        cout << "\nBased on your answers, this program does NOT recommend need a COVID test!" << endl;
+        if (!symptomsAnswers[0] && !symptomsAnswers[1])
+        {
+            cout << "You are highly likely to be free of covid!" << endl;
+        }
+        if (symptomsAnswers[0] || symptomsAnswers[1])
+        {
+            cout << "However, it is recomended you should still isolate yourself at home for 14 days!" << endl;
+        }
+        testResult = "Not Recomended";
+    }
+    // Either high risk symptoms, high risk location, or both
+    else
+    {
+        cout << "\nBased on your answers, this program recommends that you DO need a COVID test!" << endl;
+        if (symptomsAnswers[2])
+        {
+            if (symptomsAnswers[0] || symptomsAnswers[1])
+            {
+                cout << "Based on your answers, this program recommends that you DO need a COVID test!" << endl;
             }
         }
         else
         {
-            cout << "Invalid date. Please try again (format: dd/mm/yyyy): ";
+
         }
+        testResult = "Recomended (Pending)";
     }
 
-    
-
-
-
-    //cout << "Enter your address:";
-    //cin >> address;
-
-    //cout << "Have you travelled overseas in the last 6 months, Y/N?";
-    //cin >> overseasTravel;
-
-    //cout << "Please select your symptoms:"; // could just make an if/switch statement for this one with options 1-3. eg. 1: (Low risk) Dry cough. 2: (Medium risk) Fever
-    ////cin >> 
-
-    //cout << "Please select your visited location from the High Risk COVID areas:"; // similar to above, possibly display the db of high risk locations and display options 1-10 
-    //cin >> visitedLocation;
-
-    ////send variables to db
+    // Save to patient DB
+    ofstream ofilePatientDB;
+    ofilePatientDB.open("patientDB.txt", ios::app);
+    ofilePatientDB << endl;
+    ofilePatientDB << patientID;
+    ofilePatientDB << ", ";
+    ofilePatientDB << firstName;
+    ofilePatientDB << ", ";
+    ofilePatientDB << lastName;
+    ofilePatientDB << ", ";
+    ofilePatientDB << patientDOB;
+    ofilePatientDB << ", ";
+    ofilePatientDB << address;
+    ofilePatientDB << ", ";
+    ofilePatientDB << "N/A";
+    ofilePatientDB << ", ";
+    ofilePatientDB << "N/A";
+    ofilePatientDB << ", ";
+    ofilePatientDB << overseasTravel;
+    ofilePatientDB << ", ";
+    ofilePatientDB << testResult;
+    ofilePatientDB << ", ";
+    ofilePatientDB << "Alive";
+    ofilePatientDB.close();
 }
 
 
@@ -446,7 +669,7 @@ ifileCheckPatientDB.close();
 */
 void PrintMainMenu()
 {
-    cout << "1: Enter your details for COVID-Test Recommendation" << endl;
+    cout << "\n1: Enter your details for COVID-Test Recommendation" << endl;
     cout << "2: Submit your Covid test status & Update the location database" << endl;
     cout << "3: Display the updated location (High Risk for COVID)" << endl;
     cout << "4: Update COVID Patient Details" << endl;
@@ -471,14 +694,14 @@ void DisplayMenu()
 
     while(selection != 6)
     {
-        cout << "Please enter the number of the option you wish to select.\n" << endl;
+        cout << "\nPlease enter the number of the option you wish to select." << endl;
         PrintMainMenu();
 
         while (!(cin >> selection)) // Prevents invalid inputs like letters, etc - MW
         {
             cin.clear();
             cin.ignore(numeric_limits<streamsize>::max(), '\n');
-            cout << "\nInvalid input. Please try again.\n" << endl;;
+            cout << "\nInvalid input. Please try again." << endl;;
             PrintMainMenu();
         }
         switch (selection)
@@ -507,7 +730,7 @@ void DisplayMenu()
                 break;
 
             default: 
-                cout << "Unknown selection, please try again.\n" << endl;
+                cout << "\nUnknown selection, please try again." << endl;
         }
   
     } 
@@ -526,7 +749,7 @@ int main ()
 { 
     //CreateDatabases();
 
-    cout << "\nWelcome\n" << endl;
+    cout << "\nWelcome" << endl;
     DisplayMenu();
     
     return 0; 
