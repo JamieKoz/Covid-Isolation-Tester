@@ -1,0 +1,20 @@
+[ID, FirstName, LastName, DOB, Address, Location Visited, Date Visited, Time Visited, TraveledOS, Test, Status]
+1, John, Smith, 12/11/1991, 123 Fake St Bayswater, Bayswater Woolworths, 21/04/2020, 10:00 PM , No, Positive, Alive
+2, Max, Tailor, 22/06/1981, 123 Fake St Bayswater, Bayswater Woolworths, 21/04/2020, 10:00 PM , No, Positive, Alive
+3,  Bill,  West,  08/11/1998,  123 Fake St Bayswater,  Bayswater Woolworths,  21/04/2020,  10:00 PM ,  No, Negative,  Alive
+40, Wane, Johnson, 06/02/1974, 123 Fake St Bayswater, Bayswater Woolworths, 21/04/2020, 10:00 PM , No, Positive, Alive
+50, Sally, Miller, 24/11/1985, 123 Fake St Bayswater, Bayswater Woolworths, 21/04/2020, 10:00 PM , No, Positive, Alive
+60, Meg, Davis, 15/08/1969, 123 Fake St Bayswater, Bayswater Woolworths, 21/04/2020, 10:00 PM , No, Positive, Alive
+700, Susan, Anderson, 20/11/1988, 123 Fake St Bayswater, Bayswater Woolworths, 21/04/2020, 10:00 PM , No, Positive, Alive
+800, Phil, Wilson, 17/02/2001, 123 Fake St Bayswater, Bayswater Woolworths, 21/04/2020, 10:00 PM , No, Positive, Alive
+900, Patty, Thomas, 09/11/2000, 123 Fake St Bayswater, Bayswater Woolworths, 21/04/2020, 10:00 PM , No, Positive, Alive
+10000, Joe, Taylor, 04/03/1990, 123 Fake St Bayswater, Bayswater Woolworths, 21/04/2020, 10:00 PM , No, Positive, Alive
+20000, Sam, Lee, 06/09/1977, 123 Fake St Bayswater, Bayswater Woolworths, 21/04/2020, 10:00 PM , No, Positive, Alive
+30000, Tegan, Perez, 12/06/1989, 123 Fake St Bayswater, Bayswater Woolworths, 21/04/2020, 10:00 PM , No, Positive, Alive
+40000, Andy, Torres, 12/07/1985, 123 Fake St Bayswater, Bayswater Woolworths, 21/04/2020, 10:00 PM , No, Positive, Alive
+58540, Jake, Nguyen, 15/10/1972, 123 Fake St Bayswater, Bayswater Woolworths, 21/04/2020, 10:00 PM , No, Positive, Alive
+60454, Michael, Hill, 06/12/1986, 123 Fake St Bayswater, Bayswater Woolworths, 21/04/2020, 10:00 PM , No, Positive, Alive
+75418, Lyn, Green, 03/09/1990, 123 Fake St Bayswater, Bayswater Woolworths, 21/04/2020, 10:00 PM , No, Positive, Alive
+85154, Holly, Hall, 01/04/1985, 123 Fake St Bayswater, Bayswater Woolworths, 21/04/2020, 10:00 PM , No, Positive, Alive
+95648, Ashley, Roberts, 09/08/1988, 123 Fake St Bayswater, Bayswater Woolworths, 21/04/2020, 10:00 PM , No, Positive, Alive
+33, Michael, Woodrow, 26/08/1991, 123 Fake St Jimob Town, N/A, N/A, N/A, n, Not Recomended, Alive
