@@ -192,16 +192,19 @@ void UpdatePatientDetails()
 */
 void DisplayUpdatedLocation()
 {
-    //string line;
-    //myfile.open("location_database.txt");
-    //if (myfile.is_open()) 
-    //{ 
-    //    while ( getline(myfile, line) ) 
+    string line;
+    ifstream displayLocationsFile;
+    displayLocationsFile.open("highRiskLocationsDB.txt");
+    if (displayLocationsFile.is_open()) 
+    { 
+    //    while (!displayLocationsFile.eof()) 
     //    { 
     //    cout << line << '\n'; 
     //    }
-    //} 
-    //myfile.close();
+    cout << displayLocationsFile.rdbuf();
+    } 
+    cout << endl;
+    displayLocationsFile.close();
 }
 
 
@@ -235,42 +238,35 @@ If they were positive, then we get their input of visitedLocations
 So far I have just appended it to the database, duplicates arent checked at this stage. 
 
 Things to fix:
--menu option selections and loopings need to function properly (high risk locations option is being reached)
 - menu option when input is a char it still continues
--database needs to print on newlines
 
 **/
 void UpdateTestStatus()
 {
     fstream ifileCheckPatientDB, fout;
-    //opens existing record
-    ifileCheckPatientDB.open("patientDB.txt", ios::in);
-    fout.open("patientDBtemp.txt", ios::out);
-    int patientID;
+    int patientID, i;
     string getRowLine, getRowVar, updatedStatus;
     char visitedLocation[100];
     vector<string> tempRow;
-    int selection(0);
 
     int indexOfTestStatus = 9; //index of test in csv file
-    int count = 0, i;
+
     // get patient id from user
     cout << "Enter your Patient ID:";
     cin >> patientID;
-    //get data to be updated
+
+    //get test status to be updated
     cout << "Enter test status." << endl;
     cout << "Enter 1 for Positive.\nEnter 2 for Negative." << endl;
-    cin >> selection;
-    while(selection)
-    {
-        //this is causing loop to not end
-        // while (!(cin >> selection))
-        // {
-        //     cin.clear();
-        //     cin.ignore(numeric_limits<streamsize>::max(), '\n');
-        //     cout << "\nInvalid input.\n\nPlease enter the number of the option you wish to select.\n1: Positive\n2: Negative" << endl;
-        //     cout << "\n>> ";
-        // }
+    
+        int selection(0);
+        while (!(cin >> selection))
+        {
+            cin.clear();
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            cout << "\nInvalid input.\n\nPlease enter the number of the option you wish to select.\n1: Positive\n2: Negative" << endl;
+            cout << "\n>> ";
+        }
             switch(selection)
             {
                 case 1:
@@ -279,7 +275,6 @@ void UpdateTestStatus()
                     cout << "Enter your visited location:" << endl;
                     cin.ignore();
                     cin.getline(visitedLocation, 100);
-
                     break;
                 case 2:
                     //update this patient is negative in the db
@@ -288,9 +283,9 @@ void UpdateTestStatus()
                 default:
                     cout << "Unknown selection, please try again.\n" << endl;
             }
+    ifileCheckPatientDB.open("patientDB.txt", ios::in);
+    fout.open("patientDBtemp.txt", ios::out);
 
-        break;
-    }
     getline(ifileCheckPatientDB, getRowLine); 
     while (getline(ifileCheckPatientDB, getRowLine))
     { 
@@ -310,16 +305,17 @@ void UpdateTestStatus()
 
         if(compareID == patientID)
         {
-            count = 1;
             stringstream convert;
 
             convert << updatedStatus; // pushed positive/negative to the stream
-
+            
             tempRow[indexOfTestStatus] = convert.str(); 
+
+            
 
             if(!ifileCheckPatientDB.eof())
             {
-                for(i=0; i < row_size - 1; i++ )
+                for(i=0; i < row_size - 1; i++ ) // the tempfile patientDBtemp.txt is not being written to??
                 {
                     //write the updated data to new file 
                     fout << tempRow[i] << ", ";
@@ -327,6 +323,7 @@ void UpdateTestStatus()
                 fout << tempRow[row_size] << "\n"; //newlines each row to make columns
             }
         }
+           
         
         else // write out rest of file 
         {
@@ -345,22 +342,22 @@ void UpdateTestStatus()
             break;
         }
     }
-    if(count == 0)
+    if(ifileCheckPatientDB.fail())
     {
         cout << "[] - The database is empty.";
     }
-    //update location database of new high risk location
-    fstream ifileAddHighRiskLocations;
-    ifileAddHighRiskLocations.open("highRiskLocationsDB.txt", ios_base::app); //appends to the database
-    ifileAddHighRiskLocations << "\n" << visitedLocation;
+    //this block prevents highRiskLocations database from getting input if the user input is negative
+    if(selection == 1){
+        fstream ifileAddHighRiskLocations;
+        ifileAddHighRiskLocations.open("highRiskLocationsDB.txt", ios_base::app); //appends to the location database
+        ifileAddHighRiskLocations << "\n" << visitedLocation;
+        ifileAddHighRiskLocations.close();
+    }
     ifileCheckPatientDB.close();
     fout.close();
-    ifileAddHighRiskLocations.close();
     remove("database.txt"); //removing the previous database, then renaming the newly written and changing its name to replace the old.
     rename("patientDBtemp.txt", "patientDBtemp1"); // this must be changed if it works to "patientDB.txt"
-    cout << "You've succeessfully updated the database.";
-
-
+    cout << "You've successfully updated the database.";
 }
 
 
