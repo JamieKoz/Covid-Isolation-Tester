@@ -245,12 +245,12 @@ void UpdateTestStatus()
     fstream ifileCheckPatientDB, fout;
     //opens existing record
     ifileCheckPatientDB.open("patientDB.txt", ios::in);
-    fout.open("patientDBnew.txt", ios::out);
-    int patientID, selection;
+    fout.open("patientDBtemp.txt", ios::out);
+    int patientID;
     string getRowLine, getRowVar, updatedStatus;
-    string visitedLocation;
+    char visitedLocation[100];
     vector<string> tempRow;
-    
+    int selection(0);
 
     int indexOfTestStatus = 9; //index of test in csv file
     int count = 0, i;
@@ -259,53 +259,64 @@ void UpdateTestStatus()
     cin >> patientID;
     //get data to be updated
     cout << "Enter test status." << endl;
-    cout << "Enter 1 for positive.\nEnter 2 for Negative.";
+    cout << "Enter 1 for Positive.\nEnter 2 for Negative." << endl;
     cin >> selection;
-    while(selection != 1)
+    while(selection)
     {
-        while (!(cin >> selection))
-        {
-            cin.clear();
-            cin.ignore(numeric_limits<streamsize>::max(), '\n');
-            cout << "\nInvalid input.\n\nPlease enter the number of the option you wish to select.\n1: Positive\n2: Negative" << endl;
-            cout << "\n>> ";
-        }
-        switch(selection)
-        {
-            case 1:
-                //update this patient is positive in the db
-                updatedStatus = "Positive";
-                cout << "Enter your visited location:" << endl;
-                cin >> visitedLocation;
-                break;
-            case 2:
-                //update this patient is negative in the db
-                updatedStatus = "Negative";
-                break;
-            default:
-                cout << "Unknown selection, please try again.\n" << endl;
-        }
-    }
+        //this is causing loop to not end
+        // while (!(cin >> selection))
+        // {
+        //     cin.clear();
+        //     cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        //     cout << "\nInvalid input.\n\nPlease enter the number of the option you wish to select.\n1: Positive\n2: Negative" << endl;
+        //     cout << "\n>> ";
+        // }
+            switch(selection)
+            {
+                case 1:
+                    //update this patient is positive in the db
+                    updatedStatus = "Positive";
+                    cout << "Enter your visited location:" << endl;
+                    cin.ignore();
+                    cin.getline(visitedLocation, 100);
 
+                    break;
+                case 2:
+                    //update this patient is negative in the db
+                    updatedStatus = "Negative";
+                    break;
+                default:
+                    cout << "Unknown selection, please try again.\n" << endl;
+            }
+
+        break;
+    }
     getline(ifileCheckPatientDB, getRowLine); 
     while (getline(ifileCheckPatientDB, getRowLine))
     { 
         tempRow.clear();
+
         stringstream ss(getRowLine); // Splits Row into "Columns" (RowVar)
 
-        // word variable is storing the column data of a row
+        // getRowVar variable is storing the column data of a row
         while (getline(ss, getRowVar, ','))
         {
             tempRow.push_back(getRowVar);
         }
+
         int compareID = stoi(tempRow[0]);
+
         int row_size = tempRow.size();
+
         if(compareID == patientID)
         {
             count = 1;
             stringstream convert;
-            convert << updatedStatus;
-            tempRow[indexOfTestStatus] = convert.str();
+
+            convert << updatedStatus; // pushed positive/negative to the stream
+
+            tempRow[indexOfTestStatus] = convert.str(); 
+
             if(!ifileCheckPatientDB.eof())
             {
                 for(i=0; i < row_size - 1; i++ )
@@ -313,10 +324,11 @@ void UpdateTestStatus()
                     //write the updated data to new file 
                     fout << tempRow[i] << ", ";
                 }
-                fout << tempRow[row_size - 1] << "\n";
+                fout << tempRow[row_size] << "\n"; //newlines each row to make columns
             }
         }
-        else 
+        
+        else // write out rest of file 
         {
             if(!ifileCheckPatientDB.eof())
             {
@@ -324,8 +336,10 @@ void UpdateTestStatus()
                 {
                     fout << tempRow[i] << ", ";
                 }
+                fout << tempRow[row_size] << "\n"; //newlines each row to make columns
             }
         }
+        // end of the file so break
         if(ifileCheckPatientDB.eof())
         {
             break;
@@ -335,15 +349,16 @@ void UpdateTestStatus()
     {
         cout << "[] - The database is empty.";
     }
-        
     //update location database of new high risk location
     fstream ifileAddHighRiskLocations;
-    ifileAddHighRiskLocations.open("highRiskLocationsDB.txt");
-    ifileAddHighRiskLocations << visitedLocation << ", ";
+    ifileAddHighRiskLocations.open("highRiskLocationsDB.txt", ios_base::app); //appends to the database
+    ifileAddHighRiskLocations << "\n" << visitedLocation;
     ifileCheckPatientDB.close();
     fout.close();
+    ifileAddHighRiskLocations.close();
     remove("database.txt"); //removing the previous database, then renaming the newly written and changing its name to replace the old.
-    rename("patientDBnew.txt", "patientDBnew1"); // this must be changed if it works to "patientDB.txt"
+    rename("patientDBtemp.txt", "patientDBtemp1"); // this must be changed if it works to "patientDB.txt"
+    cout << "You've succeessfully updated the database.";
 
 
 }
@@ -651,7 +666,7 @@ void CovidTestRecommendationDetails()
         {
             if (getRowLine.empty())
             {
-                cout << "\nUnable to recommend COVID Test – required data missing" << endl; // As required - MW
+                cout << "\nUnable to recommend COVID Test ï¿½ required data missing" << endl; // As required - MW
                 return;
             }
             cout << "\nHave you had any of these symptoms -> ";
