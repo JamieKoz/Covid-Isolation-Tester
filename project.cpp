@@ -16,7 +16,6 @@
 *   A lot of good work here, but also a number of issues that I just don't have time to work on with the time I have left today (unfortunatly I need sleep)
 *   I will make a bigger effort on adding code tomorrow, just needed to take time today to make sure the fondations are correct and everything is set up correctly so there wont be issues.
 *       -> For example, there are a number of things that will need to be re-written to work as expected
-*
 *   IN REGARDS TO THE DATABASES:
 *       - It says we need a primary DB, but I think 3 seperate DBs makes more sense
 *       - Symptoms should be formatted to just have three lines, each line is a risk level
@@ -26,32 +25,72 @@
 *           -> Duplicates might be an issue, but its low priority to address atm and not really a major issue
 *       - Patients should be one ID per line and each detail (name, address, etc) seperated by a character (comma?) so we can format it in and out of the DB
 *           -> When there is an update, the line can just be overwritten with new data.
-*
 *   FOR THE REST OF THE PROGRAM:
 *       - You can read my block comments. Hopefully they are clear-ish.
 *           -> I'll be doing a fair amount of work on this so just keep me upto date if you are working on something and I'll try and do the same
+* 
+*   (MW - 14/10/21)
+*   OPTION 1 fuly working
+*       - Need to add 2-3 more option outputs as required ("At least Try 5 more combination from real life scenario")
+*   New reusable functions added:
+*       - void PrintMainMenu()
+*       - bool CheckAddressValid(char(&charArray)[MAX_CHAR_ARRAY_LENGTH])
+*       - bool CheckCharArrayValid(char(&charArray)[MAX_CHAR_ARRAY_LENGTH])
+*       - bool CheckDateValid(string& date)
+*       - bool CheckYesNoValid(string& answer)
+*       - bool CheckInterupt(int& count)
+* 
+*   (MW - 15/10/21)
+*   Minor tweaks to OPTION 1 
+*       - Still need to add 2-3 more option outputs as required ("At least Try 5 more combination from real life scenario")
+*   Reworked OPTION 2
+*       - A lot of potential hazards and bugs fixed
+*       - Haven't really tested the reworked code yet, but I am pretty confident its solid as its based a lot off what I did in OPTION 1
+*   Added a bunch of useful #define's
+*   Seperated and updated the name of the patient DB varible so they are easy to work with
+*       - Gave them all default intiation values too...this might have a side effect on the CheckXisCorrectFormat functions...not sure yet
+*   New reusable functions added:
+*       - void SaveNewPatientData(ofstream& ofilePatientDB, **REFERENCES TO ALL PATIENT DB VARIABLES**)
+*       - void PopulatePatientData(vector<string> &tempDataRow, **REFERENCES TO ALL PATIENT DB VARIABLES**)
 *
 */
-
-
 
 #include <iostream> 
 #include <fstream> 
 #include <string>
 #include <vector> // - MW
 #include <sstream> // - MW
-#include <ctime> // Required for date/time format - MW
 #include <algorithm> //Required for string normalisation
 #include <cctype> //Required for string normalisation
 #include<regex> // - MW
 
 using namespace std;
 
-const int MAX_CHAR_ARRAY_LENGTH = 100;
-const int MAX_YEAR = 2021; // Manually update each year - MW
-const int MAX_CYCLES = 10; // Max amount of trys until a force quit - MW
-const int SYMPTOMS_LEVEL = 3; // [1] Low, [2] Med, [3] High - MW
+// ARRAY LENGTHS
+#define MAX_CHAR_ARRAY_LENGTH   100
+#define SYMPTOMS_ARRAY_LENGTH   3
+// ARRAY LOCATIONS
+#define SYM_LOW_ARRAY_LOC               0
+#define SYM_MED_ARRAY_LOC               1
+#define SYM_HI_ARRAY_LOC                2
+#define PATIENT_ID_ARRAY_LOC            0
+#define PATIENT_FIRST_NAME_ARRAY_LOC    1
+#define PATIENT_LAST_NAME_ARRAY_LOC     2
+#define PATIENT_DOB_ARRAY_LOC           3
+#define PATIENT_ADDRESS_ARRAY_LOC       4
+#define PATIENT_LOC_VISITED_ARRAY_LOC   5
+#define PATIENT_DATE_VISITED_ARRAY_LOC  6
+#define PATIENT_TIME_VISITED_ARRAY_LOC  7
+#define PATIENT_OS_TRAVEL_ARRAY_LOC     8
+#define PATIENT_TEST_RESULT_ARRAY_LOC   9
+#define PATIENT_STATUS_ARRAY_LOC        10
+// MISC
+#define CURRENT_YEAR            2021    // Manually update each year - MW
+#define INT_CYCLES              10      // Cycles until a force quit - MW
+#define DEFAULT_DATA           "N/A"
+#define DEFAULT_STATUS         "Alive"
 
+// SOME OF THESE MAY NEED WORK - MW
 const regex CORRECT_DATE_FORMAT{ "\\b\\d{2}[/]\\d{2}[/]\\d{4}\\b" }; // dd/mm/yyyy
 const regex CORRECT_TIME_FORMAT{ "\\b^(0[1-9]|1[0-2]):([0-5]\\d)\\s?((?:[Aa]|[Pp])\\.?[Mm]\\.?)$\\b" }; // hh:mm am|pm
 const regex CORRECT_YES_NO_FORMAT{ "\\b[y|Y][e|E]?[s|S]?|[n|N][o|O]?\\b" }; // yes or no
@@ -65,7 +104,6 @@ const regex CORRECT_ADDRESS_FORMAT{ "\\b[a-zA-Z0-9\\s/]\\b" }; // letters, numbe
 * - Might need some pointers for current user, etc as globals so I'll keep things posted.
 * 
 */
-
 //int patientID;
 //string fname;
 //string lname;
@@ -76,8 +114,216 @@ const regex CORRECT_ADDRESS_FORMAT{ "\\b[a-zA-Z0-9\\s/]\\b" }; // letters, numbe
 //string overseasTravel;
 //string covidTest;
 //string status;
-//
 //fstream myfile; 
+
+
+
+/**
+* Populates patient data variables from file when ID matches
+* @param ...
+* @returns ...
+*
+*/
+void PopulatePatientData(vector<string>& tempDataRow,
+    int& patientID,
+    char(&patientFirstName)[MAX_CHAR_ARRAY_LENGTH],
+    char(&patientLastName)[MAX_CHAR_ARRAY_LENGTH],
+    char(&patientAddress)[MAX_CHAR_ARRAY_LENGTH],
+    char(&patientLocationVisited)[MAX_CHAR_ARRAY_LENGTH],
+    string& patientDOB,
+    string& patientDateVisited,
+    string& patientTimeVisited,
+    string& patientOverseasTravel,
+    string& patientTestResult,
+    string& patientStatus)
+{
+    //ID
+    patientID = stoi(tempDataRow[PATIENT_ID_ARRAY_LOC]);
+
+    //FIRST NAME
+    strcpy_s(patientFirstName, tempDataRow[PATIENT_FIRST_NAME_ARRAY_LOC].c_str());
+
+    //LAST NAME
+    strcpy_s(patientLastName, tempDataRow[PATIENT_LAST_NAME_ARRAY_LOC].c_str());
+
+    //DOB
+    patientDOB = tempDataRow[PATIENT_DOB_ARRAY_LOC];
+
+    //ADDRESS
+    strcpy_s(patientAddress, tempDataRow[PATIENT_ADDRESS_ARRAY_LOC].c_str());
+
+    //LOCATION VISITED
+    strcpy_s(patientLocationVisited, tempDataRow[PATIENT_LOC_VISITED_ARRAY_LOC].c_str());
+
+    //DATE VISITED
+    patientDateVisited = tempDataRow[PATIENT_DATE_VISITED_ARRAY_LOC];
+
+    //TIME VISITED
+    patientTimeVisited = tempDataRow[PATIENT_TIME_VISITED_ARRAY_LOC];
+
+    //OVERSEAS TRAVEL
+    patientOverseasTravel = tempDataRow[PATIENT_OS_TRAVEL_ARRAY_LOC];
+
+    //TEST RESULT
+    patientTestResult = tempDataRow[PATIENT_TEST_RESULT_ARRAY_LOC];
+
+    //STATUS
+    patientStatus = tempDataRow[PATIENT_STATUS_ARRAY_LOC];
+}
+/**
+* Sends new patient data to desired DB file
+* @parm ...  (many)
+* @returns ...
+*
+*/
+void SaveNewPatientData(ofstream& ofilePatientDB,
+    int& patientID,
+    char(&patientFirstName)[MAX_CHAR_ARRAY_LENGTH],
+    char(&patientLastName)[MAX_CHAR_ARRAY_LENGTH],
+    char(&patientAddress)[MAX_CHAR_ARRAY_LENGTH],
+    char(&patientLocationVisited)[MAX_CHAR_ARRAY_LENGTH],
+    string& patientDOB,
+    string& patientDateVisited,
+    string& patientTimeVisited,
+    string& patientOverseasTravel,
+    string& patientTestResult,
+    string& patientStatus)
+{
+    //ID
+    ofilePatientDB << patientID;
+    ofilePatientDB << ",";
+    //FIRST NAME
+    ofilePatientDB << patientFirstName;
+    ofilePatientDB << ",";
+    //LAST NAME
+    ofilePatientDB << patientLastName;
+    ofilePatientDB << ",";
+    //DOB
+    ofilePatientDB << patientDOB;
+    ofilePatientDB << ",";
+    //ADDRESS
+    ofilePatientDB << patientAddress;
+    ofilePatientDB << ",";
+    //LOCATION VISITED
+    ofilePatientDB << patientLocationVisited;
+    ofilePatientDB << ",";
+    //DATE VISITED
+    ofilePatientDB << patientDateVisited;
+    ofilePatientDB << ",";
+    //TIME VISITED
+    ofilePatientDB << patientTimeVisited;
+    ofilePatientDB << ",";
+    //OVERSEAS TRAVEL
+    ofilePatientDB << patientOverseasTravel;
+    ofilePatientDB << ",";
+    //TEST RESULT
+    ofilePatientDB << patientTestResult;
+    ofilePatientDB << ",";
+    //STATUS
+    ofilePatientDB << patientStatus << endl;
+}
+
+/**
+* Checks if interupt is required
+* @param ...
+* @returns ...
+*/
+bool CheckInterupt(int& count)
+{
+    count++;
+    if (count == INT_CYCLES)
+    {
+        cout << "\nToo many invalid inputs.\nReturning to main menu.\n" << endl;
+        return true;
+    }
+    return false;
+}
+/**
+* Checks to make sure the answer is yes or no
+* @param ...
+* @returns ...
+*/
+bool CheckYesNoValid(string& answer)
+{
+    cin.clear();
+    getline(cin, answer);
+    if (!regex_match(answer, CORRECT_YES_NO_FORMAT))
+    {
+        cout << "Please try again (yes or no): ";
+        return false;
+    }
+    return true;
+}
+/**
+* Checks to make sure the date is formatted correctly
+* @param ...
+* @returns ...
+*/
+bool CheckDateValid(string& date)
+{
+    cin.clear();
+    int dayDOB, monthDOB, yearDOB;
+    while (!regex_match(date, CORRECT_DATE_FORMAT))
+    {
+        getline(cin, date);
+        if (!regex_match(date, CORRECT_DATE_FORMAT))
+        {
+            cout << "Please try again (format: dd/mm/yyyy): ";
+        }
+    }
+    dayDOB = stoi(date.substr(0, 2));
+    monthDOB = stoi(date.substr(3, 5));
+    yearDOB = stoi(date.substr(6, 10));
+
+    if ((yearDOB > 1900 && yearDOB < CURRENT_YEAR) && (monthDOB >= 1 && monthDOB <= 12) && (dayDOB >= 1 && dayDOB <= 31))
+    {
+        if (((monthDOB == 4 || monthDOB == 6 || monthDOB == 9 || monthDOB == 11) && dayDOB < 31)               // IF (Months with 30 max days)
+            || (monthDOB != 2)                                                                                 // OR (Not Febuary)
+            || (monthDOB == 2 && ((yearDOB % 4 == 0 && dayDOB <= 29) || (yearDOB % 4 != 0 && dayDOB <= 28))))  // OR (Check leap year)
+        {
+            return true;
+        }
+    }
+    cout << "Invalid date. Please try again (format: dd/mm/yyyy): ";
+    return false;
+}
+/**
+* Checks an array of Char values to make sure it contains only letters
+* @param ...
+* @returns ...
+*/
+bool CheckCharArrayValid(char(&charArray)[MAX_CHAR_ARRAY_LENGTH])
+{
+    cin.clear();
+    cin.getline(charArray, MAX_CHAR_ARRAY_LENGTH);
+    for (int i = 0; i < MAX_CHAR_ARRAY_LENGTH; i++)
+    {
+        if (!isalpha(charArray[i]) && charArray[i] != '\0')
+        {
+            return false;
+        }
+    }
+    return true;
+}
+/**
+* Checks an address to make sure it only contains valid characters (no commas)
+* @param ...
+* @returns ...
+*/
+bool CheckAddressValid(char(&charArray)[MAX_CHAR_ARRAY_LENGTH])
+{
+    cin.clear();
+    cin.getline(charArray, MAX_CHAR_ARRAY_LENGTH);
+    for (int i = 0; i < MAX_CHAR_ARRAY_LENGTH; i++)
+    {
+        if (charArray[i] == ',')
+        {
+            charArray[i] = ' ';
+        }
+    }
+    return true;
+}
+
 
 
 /**
@@ -226,244 +472,229 @@ void DisplayUpdatedLocation()
 * - Update status of test result
 *       -> Add any new locations to locations DB if positive (loop)
 *       -> Check for location duplicates? (might be too much at this stage)
+*
+* (JK - 14/10/21)
+* Thus far I have the user input their patientID which we fetch from the database.
+*   -> (MW - 15/10/21) I've reworked the code so that it checks the DB once a patient ID is entered...after all if the ID is not in the DB then we need to try again or return to main menu.
+* Then I get their input of status(positive or negative).
+*   -> (MW - 15/10/21) I added an option for the user to basically quit if they don't have their result for some reason.
+* We know that their test status in the database is at index 9.
+*   -> (MW - 15/10/21) I hate magic numbers so thats part of the reason I went ahead and made all those #define's, etc.
+* Retrieving each row, splitting at commas, we retrieve the 9th index.
+*   -> (MW - 15/10/21) When the patient ID is found in the DB, the function PopulatePatientData() is called and converts all those array points into the patientX variables, so just modify those.
+* We then write into their status positive or negative depending what they chose (1 or 2)
+*   -> (MW - 15/10/21) Now done automatically when the user selects 1 or 2 for positive or negative.
+* If they were positive, then we get their input of visitedLocations
+*   -> (MW - 15/10/21) THIS IS WHAT NEEDS WORK. Also need time and date of visit!
+* So far I have just appended it to the database, duplicates arent checked at this stage. 
+* Things to fix:
+* - menu option when input is a char it still continues
+* 
+* (MW - 15/10/21)
+* Left a bunch of reply comments above.
+* Hopefully the bugs are gone now.
+* Just need to add all that functionalilty required when the patient states they returned a positive test then I think its good.
+* 
 */
-
-/** (JK - 14/10/21) - UpdateTestStatus() info
-Thus far I have the user input their patientID which we fetch from the database.
-Then I get their input of status(positive or negative).
-We know that their test status in the database is at index 9.
-Retrieving each row, splitting at commas, we retrieve the 9th index.
-We then write into their status positive or negative depending what they chose (1 or 2)
-If they were positive, then we get their input of visitedLocations
-So far I have just appended it to the database, duplicates arent checked at this stage. 
-
-Things to fix:
-- menu option when input is a char it still continues
-
-**/
 void UpdateTestStatus()
 {
-    fstream ifileCheckPatientDB, fout;
-    int patientID, i;
-    string getRowLine, getRowVar, updatedStatus;
-    char visitedLocation[100];
-    vector<string> tempRow;
+    int interuptCount(0);
+    bool allowContinue(false), patientMatch(false), breakSwitch(false);
+    //PATIENT DB VARS
+    int patientID(NULL);
+    char patientFirstName[MAX_CHAR_ARRAY_LENGTH](DEFAULT_DATA), patientLastName[MAX_CHAR_ARRAY_LENGTH](DEFAULT_DATA), patientAddress[MAX_CHAR_ARRAY_LENGTH](DEFAULT_DATA), patientLocationVisited[MAX_CHAR_ARRAY_LENGTH](DEFAULT_DATA);
+    string patientDOB(DEFAULT_DATA), patientDateVisited(DEFAULT_DATA), patientTimeVisited(DEFAULT_DATA), patientOverseasTravel(DEFAULT_DATA), patientTestResult(DEFAULT_DATA), patientStatus(DEFAULT_STATUS);
 
-    int indexOfTestStatus = 9; //index of test in csv file
-
-    // get patient id from user
-    cout << "Enter your Patient ID:";
-    cin >> patientID;
-
-    //get test status to be updated
-    cout << "Enter test status." << endl;
-    cout << "Enter 1 for Positive.\nEnter 2 for Negative." << endl;
-    
-        int selection(0);
-        while (!(cin >> selection))
+    while (!allowContinue)
+    {
+        // Get patient id from user
+        cout << "\nEnter your patient ID (numbers only, no spaces): ";
+        while (!(cin >> patientID)) // Prevents invalid inputs like letters, etc - MW
         {
+            if (CheckInterupt(interuptCount)) { return; }
             cin.clear();
             cin.ignore(numeric_limits<streamsize>::max(), '\n');
-            cout << "\nInvalid input.\n\nPlease enter the number of the option you wish to select.\n1: Positive\n2: Negative" << endl;
-            cout << "\n>> ";
-        }
-            switch(selection)
-            {
-                case 1:
-                    //update this patient is positive in the db
-                    updatedStatus = "Positive";
-                    cout << "Enter your visited location:" << endl;
-                    cin.ignore();
-                    cin.getline(visitedLocation, 100);
-                    break;
-                case 2:
-                    //update this patient is negative in the db
-                    updatedStatus = "Negative";
-                    break;
-                default:
-                    cout << "Unknown selection, please try again.\n" << endl;
-            }
-    ifileCheckPatientDB.open("patientDB.txt", ios::in);
-    fout.open("patientDBtemp.txt", ios::out);
-
-    getline(ifileCheckPatientDB, getRowLine); 
-    while (getline(ifileCheckPatientDB, getRowLine))
-    { 
-        tempRow.clear();
-
-        stringstream ss(getRowLine); // Splits Row into "Columns" (RowVar)
-
-        // getRowVar variable is storing the column data of a row
-        while (getline(ss, getRowVar, ','))
-        {
-            tempRow.push_back(getRowVar);
+            cout << "\nInvalid input.\n\nEnter your patient ID (numbers only, no spaces): ";
         }
 
-        int compareID = stoi(tempRow[0]);
-
-        int row_size = tempRow.size();
-
-        if(compareID == patientID)
+        // Open the patient DB
+        ifstream ifilePatientDB;
+        ifilePatientDB.open("patientDB.txt");
+        if (ifilePatientDB.fail())
         {
-            stringstream convert;
+            cout << "\nPatient Database Missing!\nPlease contact the application administrator on 555-123-456" << endl;
+            cout << "\nReturning to main menu.\n" << endl;
+            return;
+        }
 
-            convert << updatedStatus; // pushed positive/negative to the stream
-            
-            tempRow[indexOfTestStatus] = convert.str(); 
+        //Whilst the patient DB file is open
+        if (ifilePatientDB.is_open())
+        {
+            // Creat a temp patient DB to store new data
+            ofstream ofilePatientDBTemp;
+            ofilePatientDBTemp.open("patientDBTemp.txt");
 
-            
+            string getRowLine, getRowVar;
+            vector<string> tempDataRow;
+            int compareID;
 
-            if(!ifileCheckPatientDB.eof())
+            getline(ifilePatientDB, getRowLine); // First row redundant - Add to temp DB
+            ofilePatientDBTemp << getRowLine << endl;
+
+            while (getline(ifilePatientDB, getRowLine))
             {
-                for(i=0; i < row_size - 1; i++ ) // the tempfile patientDBtemp.txt is not being written to??
+                tempDataRow.clear(); // Memory Management - Clears previous line get
+
+                stringstream ss(getRowLine); // Splits Row into "Columns" (RowVar)
+
+                while (getline(ss, getRowVar, ','))
                 {
-                    //write the updated data to new file 
-                    fout << tempRow[i] << ", ";
+                    tempDataRow.push_back(getRowVar);
                 }
-                fout << tempRow[row_size] << "\n"; //newlines each row to make columns
-            }
-        }
-           
-        
-        else // write out rest of file 
-        {
-            if(!ifileCheckPatientDB.eof())
-            {
-                for (i = 0; i < row_size - 1; i++) 
+
+                compareID = stoi(tempDataRow[PATIENT_ID_ARRAY_LOC]);
+
+                // !!!!!! - This is where patient data is updated IFF a match is found
+                if (compareID == patientID)
                 {
-                    fout << tempRow[i] << ", ";
+                    patientMatch = true;
+
+                    // Store the current patients data ready to modify
+                    PopulatePatientData(tempDataRow,
+                        patientID,
+                        patientFirstName, patientLastName, patientAddress, patientLocationVisited,
+                        patientDOB, patientDateVisited, patientTimeVisited, patientOverseasTravel, patientTestResult, patientStatus);
+
+                    cout << "\nHello, " << patientFirstName << " " << patientLastName << "," << endl;
+
+                    // TODO: add something here to check if test was pending or not and just ask if patient wants to continue if they werent recomended a test (or not, you're a free individual)
+
+                    //get test status to be updated
+                    cout << "\nWhat was your test result?" << endl;
+                    cout << "Enter 1 (Positive), 2 (Negative), or 3 (Not Sure): ";
+
+                    int selection(0);
+                    while (!breakSwitch)
+                    {
+                        while (!(cin >> selection))
+                        {
+                            cin.clear();
+                            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+                            cout << "\n\nInvalid input.\nEnter 1 (Positive), 2 (Negative), or 3 (Not Sure): ";
+                        }
+                        switch (selection)
+                        {
+                        case 1:
+                            breakSwitch = true;
+                            //update this patient is positive in the db
+                            patientTestResult = "Positive";
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                            // TODO: ADD STUFF HERE LIKE LOC VISTED, DATE VISITED, TIME VISITED
+
+
+                            // TODO: USE THE REGEX FUNCTION TO VARIFY CORRECT LOCATION, DATE, TIME FORMATS
+
+
+                            // TODO: LOAD LIST OF CURRENT HIGH RISK LOCS SO PATIENT CAN ADD NEW ONE OR NOT
+
+                            cout << "Enter your visited location:" << endl;
+                            cin.ignore();
+                            cin.getline(patientLocationVisited, MAX_CHAR_ARRAY_LENGTH); // run through regex function checker
+
+
+
+                            // TODO: IF THE PATIENTS ADDS A NEW HIGH RISK LOCATION, ADD JUST THAT VAR TO THE HIGH RISK DB TOO
+
+
+
+
+
+
+
+
+
+
+
+                            break;
+
+                        case 2:
+                            breakSwitch = true;
+                            //update this patient is negative in the db
+                            patientTestResult = "Negative";
+                            break;
+
+                        case 3:
+                            breakSwitch = true;
+                            //Exit
+                            ifilePatientDB.close();
+                            ofilePatientDBTemp.close();
+                            remove("patientDBTemp.txt");
+                            cout << "\nPlease come back when you know your test result.\nNow returning you to main menu." << endl;
+                            return;
+
+                        default:
+                            cout << "Unknown selection, please try again.\n" << endl;
+                        }
+                    }
+                    // Save to patient DB
+                    SaveNewPatientData(ofilePatientDBTemp,
+                        patientID, patientFirstName, patientLastName, patientAddress, patientLocationVisited,
+                        patientDOB, patientDateVisited, patientTimeVisited, patientOverseasTravel, patientTestResult, patientStatus);
                 }
-                fout << tempRow[row_size] << "\n"; //newlines each row to make columns
+                // !!!!!! - This is where the remaining lines of data are transfered to the temp file
+                else
+                {
+                ofilePatientDBTemp << getRowLine << endl;;
+                }
+            }
+            if (patientMatch)
+            {
+                // Make temp file the new DB
+                allowContinue = true;
+                ifilePatientDB.close();
+                ofilePatientDBTemp.close();
+
+
+                // TODO: CHANGE BACK
+                remove("patientDBtemp.txt"); //removing the previous database, then renaming the newly written and changing its name to replace the old.
+                //rename("patientDBtemp.txt", "patientDBtemp1"); // this must be changed if it works to "patientDB.txt"
+                cout << "\nYou've successfully updated the database." << endl;
+
+            }
+            else
+            {
+                // Disregard temp file and tell user that the patient ID does not exist in the DB (try again?)
+
+                ifilePatientDB.close();
+                ofilePatientDBTemp.close();
+                remove("patientDBTemp.txt");
+                cout << "\n[] - The database is empty." << endl;
+
+                // TODO: TELL USER / TRY A NEW SEARCH????
+
             }
         }
-        // end of the file so break
-        if(ifileCheckPatientDB.eof())
-        {
-            break;
-        }
     }
-    if(ifileCheckPatientDB.fail())
-    {
-        cout << "[] - The database is empty.";
-    }
-    //this block prevents highRiskLocations database from getting input if the user input is negative
-    if(selection == 1){
-        fstream ifileAddHighRiskLocations;
-        ifileAddHighRiskLocations.open("highRiskLocationsDB.txt", ios_base::app); //appends to the location database
-        ifileAddHighRiskLocations << "\n" << visitedLocation;
-        ifileAddHighRiskLocations.close();
-    }
-    ifileCheckPatientDB.close();
-    fout.close();
-    remove("database.txt"); //removing the previous database, then renaming the newly written and changing its name to replace the old.
-    rename("patientDBtemp.txt", "patientDBtemp1"); // this must be changed if it works to "patientDB.txt"
-    cout << "You've successfully updated the database.";
 }
 
 
 
 
-
-/**
-* Checks if interupt is required
-* @param ...
-* @returns ...
-*/
-bool checkInterupt(int& count)
-{
-    count++;
-    if (count == MAX_CYCLES)
-    {
-        cout << "\nToo many invalid inputs.\nReturning to main menu.\n" << endl;
-        return true;
-    }
-    return false;
-}
-/**
-* Checks to make sure the answer is yes or no
-* @param ...
-* @returns ...
-*/
-bool checkYesNoValid(string& answer)
-{
-    cin.clear();
-    getline(cin, answer);
-    if (!regex_match(answer, CORRECT_YES_NO_FORMAT))
-    {
-        cout << "Please try again (yes or no): ";
-        return false;
-    }
-    return true;
-}
-/**
-* Checks to make sure the date is formatted correctly
-* @param ...
-* @returns ...
-*/
-bool checkDateValid(string& date)
-{
-    cin.clear();
-    int dayDOB, monthDOB, yearDOB;
-    while (!regex_match(date, CORRECT_DATE_FORMAT))
-    {
-        getline(cin, date);
-        if (!regex_match(date, CORRECT_DATE_FORMAT))
-        {
-            cout << "Please try again (format: dd/mm/yyyy): ";
-        }
-    }
-    dayDOB = stoi(date.substr(0, 2));
-    monthDOB = stoi(date.substr(3, 5));
-    yearDOB = stoi(date.substr(6, 10));
-
-    if ((yearDOB > 1900 && yearDOB < MAX_YEAR) && (monthDOB >= 1 && monthDOB <= 12) && (dayDOB >= 1 && dayDOB <= 31))
-    {
-        if (((monthDOB == 4 || monthDOB == 6 || monthDOB == 9 || monthDOB == 11) && dayDOB < 31)               // IF (Months with 30 max days)
-            || (monthDOB != 2)                                                                                 // OR (Not Febuary)
-            || (monthDOB == 2 && ((yearDOB % 4 == 0 && dayDOB <= 29) || (yearDOB % 4 != 0 && dayDOB <= 28))))  // OR (Check leap year)
-        {
-            return true;
-        }
-    }
-    cout << "Invalid date. Please try again (format: dd/mm/yyyy): ";
-    return false;
-}
-/**
-* Checks an array of Char values to make sure it contains only letters
-* @param ...
-* @returns ...
-*/
-bool checkCharArrayValid(char(&charArray)[MAX_CHAR_ARRAY_LENGTH])
-{
-    cin.clear();
-    cin.getline(charArray, MAX_CHAR_ARRAY_LENGTH);
-    for (int i = 0; i < MAX_CHAR_ARRAY_LENGTH; i++)
-    {
-        if (!isalpha(charArray[i]) && charArray[i] != '\0')
-        {
-            return false;
-        }
-    }
-    return true;
-}
-/**
-* Checks an address to make sure it only contains valid characters (no commas)
-* @param ...
-* @returns ...
-*/
-bool checkAddressValid(char(&charArray)[MAX_CHAR_ARRAY_LENGTH])
-{
-    cin.clear();
-    cin.getline(charArray, MAX_CHAR_ARRAY_LENGTH);
-    for (int i = 0; i < MAX_CHAR_ARRAY_LENGTH; i++)
-    {
-        if (charArray[i] == ',')
-        {
-            charArray[i] = ' ';
-        }
-    }
-    return true;
-}
 /**
 * OPTION 1: Takes in new user info, stores info to DB, and also recommends if user needs a test
 * @param ...
@@ -489,17 +720,19 @@ bool checkAddressValid(char(&charArray)[MAX_CHAR_ARRAY_LENGTH])
 */
 void CovidTestRecommendationDetails()
 {
-    int patientID, interuptCount(0);
+    int interuptCount(0);
     bool allowContinue(false), highRiskLocAnswer(false), symptomsAnswers[3]{false};
-    char firstName[MAX_CHAR_ARRAY_LENGTH]{ 0 }, lastName[MAX_CHAR_ARRAY_LENGTH]{ 0 }, address[MAX_CHAR_ARRAY_LENGTH]{ 0 };
-    string patientDOB, overseasTravel, testResult;
+    //PATIENT DB VARS
+    int patientID(NULL);
+    char patientFirstName[MAX_CHAR_ARRAY_LENGTH](DEFAULT_DATA), patientLastName[MAX_CHAR_ARRAY_LENGTH](DEFAULT_DATA), patientAddress[MAX_CHAR_ARRAY_LENGTH](DEFAULT_DATA), patientLocationVisited[MAX_CHAR_ARRAY_LENGTH](DEFAULT_DATA);
+    string patientDOB(DEFAULT_DATA), patientDateVisited(DEFAULT_DATA), patientTimeVisited(DEFAULT_DATA), patientOverseasTravel(DEFAULT_DATA), patientTestResult(DEFAULT_DATA), patientStatus(DEFAULT_STATUS);
 
     while (!allowContinue)
     {
         cout << "\nEnter your patient ID (numbers only, no spaces): ";
         while (!(cin >> patientID)) // Prevents invalid inputs like letters, etc - MW
         {
-            if (checkInterupt(interuptCount)) { return; }
+            if (CheckInterupt(interuptCount)) { return; }
             cin.clear();
             cin.ignore(numeric_limits<streamsize>::max(), '\n');
             cout << "\nInvalid input.\n\nEnter your patient ID (numbers only, no spaces): ";
@@ -534,7 +767,7 @@ void CovidTestRecommendationDetails()
                     tempRow.push_back(getRowVar);
                 }
 
-                compareID = stoi(tempRow[0]);
+                compareID = stoi(tempRow[PATIENT_ID_ARRAY_LOC]);
 
                 if (compareID == patientID)
                 {
@@ -546,7 +779,7 @@ void CovidTestRecommendationDetails()
                     interuptCount = 0;
                     while (selection != 1)
                     {
-                        if (checkInterupt(interuptCount)) { return; }
+                        if (CheckInterupt(interuptCount)) { ifilePatientDB.close(); return; }
                         while (!(cin >> selection)) // Prevents invalid inputs like letters, etc - MW
                         {
                             cin.clear();
@@ -578,40 +811,40 @@ void CovidTestRecommendationDetails()
     cout << "\nPlease enter your first name (letters only, no spaces): ";
     cin.ignore();
     interuptCount = 0;
-    while (!checkCharArrayValid(firstName))
+    while (!CheckCharArrayValid(patientFirstName))
     {
-        if (checkInterupt(interuptCount)) { return; }
+        if (CheckInterupt(interuptCount)) { return; }
         cout << "Please try again (letters only, no spaces): ";
     }
 
 
     cout << "\nPlease enter your last name (letters only, no spaces): ";
     interuptCount = 0;
-    while (!checkCharArrayValid(lastName))
+    while (!CheckCharArrayValid(patientLastName))
     {
-        if (checkInterupt(interuptCount)) { return; }
+        if (CheckInterupt(interuptCount)) { return; }
         cout << "Please try again (letters only, no spaces): ";
     }
 
     cout << "\nWhat is your date of birth (format: dd/mm/yyyy): ";
     interuptCount = 0;
-    while (!checkDateValid(patientDOB))
+    while (!CheckDateValid(patientDOB))
     {
-        if (checkInterupt(interuptCount)) { return; }
+        if (CheckInterupt(interuptCount)) { return; }
     }
 
     cout << "\nPlease enter your address (no commas): ";
     interuptCount = 0;
-    while (!checkAddressValid(address))
+    while (!CheckAddressValid(patientAddress))
     {
-        if (checkInterupt(interuptCount)) { return; }
+        if (CheckInterupt(interuptCount)) { return; }
     }
 
     cout << "\nHave you travelled overseas in the last 6 months (yes or no)?: ";
     interuptCount = 0;
-    while (!checkYesNoValid(overseasTravel))
+    while (!CheckYesNoValid(patientOverseasTravel))
     {
-        if (checkInterupt(interuptCount)) { return; }
+        if (CheckInterupt(interuptCount)) { return; }
     }
 
     ifstream ifileHighRiskLocDB;
@@ -632,9 +865,9 @@ void CovidTestRecommendationDetails()
             cout << getRowLine;
             cout << " (yes or no)?: ";
             interuptCount = 0;
-            while (!checkYesNoValid(atLocationAnswer))
+            while (!CheckYesNoValid(atLocationAnswer))
             {
-                if (checkInterupt(interuptCount)) { return; }
+                if (CheckInterupt(interuptCount)) { ifileHighRiskLocDB.close(); return; }
             }
             if (regex_match(atLocationAnswer, CORRECT_YES_FORMAT))
             {
@@ -659,20 +892,21 @@ void CovidTestRecommendationDetails()
         string getRowLine, symptomsAnswer;
         int count = 0;
 
-        while (getline(ifileSymptomsDB, getRowLine) && count < SYMPTOMS_LEVEL)
+        while (getline(ifileSymptomsDB, getRowLine) && count < SYMPTOMS_ARRAY_LENGTH)
         {
             if (getRowLine.empty())
             {
-                cout << "\nUnable to recommend COVID Test � required data missing" << endl; // As required - MW
+                ifileSymptomsDB.close();
+                cout << "\nUnable to recommend COVID Test - required data missing" << endl; // As required - MW
                 return;
             }
             cout << "\nHave you had any of these symptoms -> ";
             cout << getRowLine;
             cout << " (yes or no)?: ";
             interuptCount = 0;
-            while (!checkYesNoValid(symptomsAnswer))
+            while (!CheckYesNoValid(symptomsAnswer))
             {
-                if (checkInterupt(interuptCount)) { return; }
+                if (CheckInterupt(interuptCount)) { ifileSymptomsDB.close(); return; }
             }
             if (regex_match(symptomsAnswer, CORRECT_YES_FORMAT))
             {
@@ -695,7 +929,7 @@ void CovidTestRecommendationDetails()
         {
             cout << "However, it is recomended you should still isolate yourself at home for 14 days!" << endl;
         }
-        testResult = "Not Recomended";
+        patientTestResult = "Not Recomended";
     }
     // Either high risk symptoms, high risk location, or both
     else
@@ -710,34 +944,22 @@ void CovidTestRecommendationDetails()
         }
         else
         {
-
+            // TODO: add more options (2-3 more)
         }
-        testResult = "Recomended (Pending)";
+        patientTestResult = "Recomended (Pending)";
     }
+
+    // TODO: MAYBE ONE FINAL MESSAGE TO SAY USER INFO NOW STORED IN DB / PLEASE RETURN AFTER TEST AND SELCT 2 IF TEST WAS RECOMENDED ETC
 
     // Save to patient DB
     ofstream ofilePatientDB;
     ofilePatientDB.open("patientDB.txt", ios::app);
     ofilePatientDB << endl;
-    ofilePatientDB << patientID;
-    ofilePatientDB << ", ";
-    ofilePatientDB << firstName;
-    ofilePatientDB << ", ";
-    ofilePatientDB << lastName;
-    ofilePatientDB << ", ";
-    ofilePatientDB << patientDOB;
-    ofilePatientDB << ", ";
-    ofilePatientDB << address;
-    ofilePatientDB << ", ";
-    ofilePatientDB << "N/A";
-    ofilePatientDB << ", ";
-    ofilePatientDB << "N/A";
-    ofilePatientDB << ", ";
-    ofilePatientDB << overseasTravel;
-    ofilePatientDB << ", ";
-    ofilePatientDB << testResult;
-    ofilePatientDB << ", ";
-    ofilePatientDB << "Alive";
+
+    SaveNewPatientData(ofilePatientDB,
+        patientID,patientFirstName,patientLastName,patientAddress,patientLocationVisited,
+        patientDOB,patientDateVisited,patientTimeVisited,patientOverseasTravel,patientTestResult,patientStatus);
+
     ofilePatientDB.close();
 }
 
