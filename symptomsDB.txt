@@ -1,3 +1,3 @@
-Fever, Dry Cough
-Swelling
-Vomitting
+Fever, Dry Cough, Tiredness
+Sore Throat, Headache, Aches and Pains
+Difficulty Breathing, Shortness of Breath, Loss of Speech, Chest Pain
