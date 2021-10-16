@@ -62,7 +62,7 @@
 #include <sstream> // - MW
 #include <algorithm> //Required for string normalisation
 #include <cctype> //Required for string normalisation
-#include<regex> // - MW
+#include <regex> // - MW
 
 using namespace std;
 
@@ -263,9 +263,11 @@ void SaveNewPatientData(ofstream& ofilePatientDB,
 */
 void PressEnterToContinue()
 {
-    cout << "\nPress enter to continue..." << endl;
+    cout << "\n\nPress enter to continue...";
     cin.ignore();
-    while (!(cin)) {}
+    cin.clear();
+    while (!(cin.peek())) {}
+    cout << "---------------------------------------------------------------------------------------------------------\n\n";
 }
 /**
 * Checks if interupt is required
@@ -389,9 +391,6 @@ bool CheckAddressValid(char(&charArray)[MAX_CHAR_ARRAY_LENGTH])
     }
     return true;
 }
-
-
-
 /**
 * For debugging
 * @param none
@@ -425,7 +424,6 @@ bool CheckAddressValid(char(&charArray)[MAX_CHAR_ARRAY_LENGTH])
 //    myfile.close();
 //   
 //}
-
 //needs to be tested if this works
 //string NormaliseString(string data){
 //    std::transform(data.begin(), data.end(), data.begin(),[](unsigned char c){ return std::tolower(c); });
@@ -446,16 +444,136 @@ bool CheckAddressValid(char(&charArray)[MAX_CHAR_ARRAY_LENGTH])
 */
 void DisplayPositivePatients()
 {
-    //string line;
-    //myfile.open("patient_detail_database.txt");
-    //if (myfile.is_open())
-    //{
-    //    while (getline(myfile, line))
-    //    {
-    //        cout << line << '\n'; // this also needs to be changed to display "[]" if db is empty
-    //    }
-    //}
-    //myfile.close();
+    int patientID, interuptCount(0);
+    bool allowContinue(false), patientMatch(false);
+
+    while (!allowContinue)
+    {
+        // Get patient id from user
+        cout << "\nEnter your patient ID (numbers only, no spaces): ";
+        while (!(cin >> patientID)) // Prevents invalid inputs like letters, etc - MW
+        {
+            if (CheckInterupt(interuptCount)) { PressEnterToContinue(); return; }
+            cin.clear();
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            cout << "\nInvalid input.\n\nEnter your patient ID (numbers only, no spaces): ";
+        }
+
+        // Open the patient DB
+        ifstream ifilePatientDB;
+        ifilePatientDB.open("patientDB.txt");
+        if (ifilePatientDB.fail())
+        {
+            cout << "\nPatient Database Missing!\nPlease contact the application administrator on 555-123-456" << endl;
+            cout << "\nReturning to main menu.\n" << endl;
+            PressEnterToContinue();
+            return;
+        }
+
+        //Whilst the patient DB file is open
+        if (ifilePatientDB.is_open())
+        {
+            string getRowLine, getRowVar;
+            vector<string> tempDataRow;
+            int compareID;
+
+            getline(ifilePatientDB, getRowLine); // First row redundant
+
+            while (getline(ifilePatientDB, getRowLine))
+            {
+                if (!getRowLine.empty())
+                {
+                    tempDataRow.clear(); // Memory Management - Clears previous line get
+                    stringstream ss(getRowLine); // Splits Row into "Columns" (RowVar)
+                    while (getline(ss, getRowVar, ','))
+                    {
+                        tempDataRow.push_back(getRowVar);
+                    }
+
+                    compareID = stoi(tempDataRow[PATIENT_ID_ARRAY_LOC]);
+                    if (compareID == patientID)
+                    {
+                        patientMatch = true;
+                        cout << "\n-----PATIENT " << patientID << " DETAILS-----" << endl;
+                        cout << "\nFirst Name: \t" << tempDataRow[PATIENT_FIRST_NAME_ARRAY_LOC] << endl;
+                        cout << "Last Name: \t" << tempDataRow[PATIENT_LAST_NAME_ARRAY_LOC] << endl;
+                        cout << "Date of Birth: \t" << tempDataRow[PATIENT_DOB_ARRAY_LOC] << endl;
+                        cout << "Address: \t" << tempDataRow[PATIENT_ADDRESS_ARRAY_LOC] << endl;
+
+                        if (tempDataRow[PATIENT_LOC_VISITED_ARRAY_LOC] == "N/A")
+                        {
+                            cout << "\n" << tempDataRow[PATIENT_FIRST_NAME_ARRAY_LOC] << " has not indicated visiting any locations (yet)." << endl;
+                        }
+                        else
+                        {
+                            cout << "\n" << tempDataRow[PATIENT_FIRST_NAME_ARRAY_LOC] << " visited " << tempDataRow[PATIENT_LOC_VISITED_ARRAY_LOC];
+                            cout << " on the " << tempDataRow[PATIENT_DATE_VISITED_ARRAY_LOC];
+                            cout << " at " << tempDataRow[PATIENT_TIME_VISITED_ARRAY_LOC] << endl;
+                        }
+
+                        cout << tempDataRow[PATIENT_FIRST_NAME_ARRAY_LOC] << " has ";
+                        if (tempDataRow[PATIENT_OS_TRAVEL_ARRAY_LOC] == "No")
+                        {
+                            cout << "not ";
+                            
+                        }
+                        cout << "traveled overseas." << endl;
+
+                        if (tempDataRow[PATIENT_TEST_RESULT_ARRAY_LOC] == "Not Recomended")
+                        {
+                            cout << tempDataRow[PATIENT_FIRST_NAME_ARRAY_LOC] << " was not recomended to get tested for COVID." << endl;
+                        }
+                        else
+                        {
+                            cout << "\nTEST RESULT: \t" << tempDataRow[PATIENT_TEST_RESULT_ARRAY_LOC] << endl;
+                        }
+
+                        cout << "STATUS: \t" << tempDataRow[PATIENT_STATUS_ARRAY_LOC] << endl;
+                    }
+                }
+            }
+            if (patientMatch)
+            {
+                allowContinue = true;
+                ifilePatientDB.close();
+                PressEnterToContinue();
+            }
+            else
+            {
+                ifilePatientDB.close();
+                cout << "\n[] - The database is empty." << endl; // As required in PDF
+
+                // TELL USER / TRY A NEW SEARCH????
+                int selection(0);
+                cout << "\nThe patient ID " << patientID << " does not exist in the database.\nPlease enter the number of the option you wish to select.\n1: Try again\n2: Return to main menu" << endl;
+                cout << "\n>> ";
+                interuptCount = 0;
+                while (selection != 1)
+                {
+                    if (CheckInterupt(interuptCount)) { PressEnterToContinue(); return; }
+                    while (!(cin >> selection)) // Prevents invalid inputs like letters, etc - MW
+                    {
+                        cin.clear();
+                        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+                        cout << "\nInvalid input.\n\nPlease enter the number of the option you wish to select.\n1: Try again\n2: Return to main menu" << endl;
+                        cout << "\n>> ";
+                    }
+                    switch (selection)
+                    {
+                    case 1:
+                        break;
+
+                    case 2:
+                        PressEnterToContinue();
+                        return;
+
+                    default:
+                        cout << "Unknown selection, please try again.\n" << endl;
+                    }
+                }
+            }
+        }
+    }
 }
 
 
@@ -479,15 +597,287 @@ void DisplayPositivePatients()
 */
 void UpdatePatientDetails()
 {
-    ////get by patientID or name
-    //cout << "Enter your address:";
-    //cin >> address;
-    //cout << "Have you travelled overseas in the last 6 months, Y/N?";
-    //cin >> overseasTravel;
-    //cout << "Please select your visited location from the High Risk COVID areas:"; // similar to above, possibly display the db of high risk locations and display options 1-10 
-    //cin >> visitedLocation;
-    //cout << "Status:" << "1.Cured" << endl << "2.Dead";
-    //cin >> status; // to be fixed
+    int interuptCount(0);
+    bool allowContinue(false), patientMatch(false);
+    //PATIENT DB VARS
+    PatientDataVaribles tempPatientData;
+
+    while (!allowContinue)
+    {
+        // Get patient id from user
+        cout << "\nEnter your patient ID (numbers only, no spaces): ";
+        while (!(cin >> tempPatientData.patientID)) // Prevents invalid inputs like letters, etc - MW
+        {
+            if (CheckInterupt(interuptCount)) { PressEnterToContinue(); return; }
+            cin.clear();
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            cout << "\nInvalid input.\n\nEnter your patient ID (numbers only, no spaces): ";
+        }
+
+        // Open the patient DB
+        ifstream ifilePatientDB;
+        ifilePatientDB.open("patientDB.txt");
+        if (ifilePatientDB.fail())
+        {
+            cout << "\nPatient Database Missing!\nPlease contact the application administrator on 555-123-456" << endl;
+            cout << "\nReturning to main menu.\n" << endl;
+            PressEnterToContinue();
+            return;
+        }
+
+        //Whilst the patient DB file is open
+        if (ifilePatientDB.is_open())
+        {
+            // Creat a temp patient DB to store new data
+            ofstream ofilePatientDBTemp;
+            ofilePatientDBTemp.open("patientDBTemp.txt");
+
+            string getRowLine, getRowVar;
+            vector<string> tempDataRow;
+            int compareID;
+
+            getline(ifilePatientDB, getRowLine); // First row redundant - Add to temp DB
+            ofilePatientDBTemp << getRowLine << endl;
+
+            while (getline(ifilePatientDB, getRowLine))
+            {
+                if (!getRowLine.empty())
+                {
+                    tempDataRow.clear(); // Memory Management - Clears previous line get
+
+                    stringstream ss(getRowLine); // Splits Row into "Columns" (RowVar)
+
+                    while (getline(ss, getRowVar, ','))
+                    {
+                        tempDataRow.push_back(getRowVar);
+                    }
+
+                    compareID = stoi(tempDataRow[PATIENT_ID_ARRAY_LOC]);
+
+                    // !!!!!! - This is where patient data is updated IFF a match is found
+                    if (compareID == tempPatientData.patientID)
+                    {
+                        patientMatch = true;
+
+                        // Store the current patients data ready to modify
+                        PopulatePatientDataVars(tempDataRow,
+                            tempPatientData.patientID,
+                            tempPatientData.patientFirstName, tempPatientData.patientLastName, tempPatientData.patientAddress, tempPatientData.patientLocationVisited,
+                            tempPatientData.patientDOB, tempPatientData.patientDateVisited, tempPatientData.patientTimeVisited, tempPatientData.patientOverseasTravel, tempPatientData.patientTestResult, tempPatientData.patientStatus);
+
+                        cout << "\nMatch found!" << endl;
+
+                        bool continueUpdating(true);
+                        while (continueUpdating)
+                        {
+                            cout << "\nFirst Name: \t " << tempPatientData.patientFirstName << endl;
+                            cout << "Last Name: \t " << tempPatientData.patientLastName << endl;
+                            cout << "Date of Birth: \t " << tempPatientData.patientDOB << endl;
+                            cout << "Address: \t " << tempPatientData.patientAddress << endl;
+                            cout << "Overseas travel: " << tempPatientData.patientOverseasTravel << endl;
+                            cout << "STATUS: \t " << tempPatientData.patientStatus << endl;
+
+                            cout << "\n\nPress enter to continue...";
+                            cin.ignore();
+                            cin.clear();
+                            while (!(cin.peek())) {}
+
+                            cout << "Are these details correct? (Yes or No): ";
+                            string answer;
+                            cin.ignore();
+                            while (!CheckYesNoValid(answer))
+                            {
+                                if (CheckInterupt(interuptCount))
+                                {
+                                    ifilePatientDB.close();
+                                    ofilePatientDBTemp.close();
+                                    remove("patientDBTemp.txt");
+                                    PressEnterToContinue();
+                                    return;
+                                }
+                            }
+                            if (regex_match(answer, CORRECT_YES_FORMAT))
+                            {
+                                continueUpdating = false;
+                            }
+                            else
+                            {
+                                cout << "\n\nWhat would you like to UPDATE?" << endl;
+                                cout << "1: First name" << endl;
+                                cout << "2: Last name" << endl;
+                                cout << "3: Date of Birth" << endl;
+                                cout << "4: Address" << endl;
+                                cout << "5: Overseas travel" << endl;
+                                cout << "6: STATUS" << endl;
+                                cout << "7: Disregard changes and return to main menu" << endl;
+                                cout << "\n>> ";
+                                int selection(0);
+                                bool breakSwitch(false);
+                                while (!breakSwitch)
+                                {
+                                    while (!(cin >> selection))
+                                    {
+                                        cin.clear();
+                                        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+                                        cout << "\nInvalid input. Please try again: ";
+                                    }
+                                    switch (selection)
+                                    {
+                                    case 1:
+                                        breakSwitch = true;
+                                        cout << "\nPlease enter a new first name (letters only, no spaces): ";
+                                        cin.ignore();
+                                        interuptCount = 0;
+                                        while (!CheckCharArrayValid(tempPatientData.patientFirstName))
+                                        {
+                                            if (CheckInterupt(interuptCount)) { PressEnterToContinue(); return; }
+                                            cout << "Please try again (letters only, no spaces): ";
+                                        }
+                                        break;
+
+                                    case 2:
+                                        breakSwitch = true;
+                                        cout << "\nPlease enter a new last name (letters only, no spaces): ";
+                                        interuptCount = 0;
+                                        while (!CheckCharArrayValid(tempPatientData.patientLastName))
+                                        {
+                                            if (CheckInterupt(interuptCount)) { PressEnterToContinue(); return; }
+                                            cout << "Please try again (letters only, no spaces): ";
+                                        }
+                                        break;
+
+                                    case 3:
+                                        breakSwitch = true;
+                                        cout << "\nWhat is your new date of birth (format: dd/mm/yyyy): ";
+                                        interuptCount = 0;
+                                        while (!CheckDateValid(tempPatientData.patientDOB))
+                                        {
+                                            if (CheckInterupt(interuptCount)) { PressEnterToContinue(); return; }
+                                        }
+                                        break;
+
+                                    case 4:
+                                        breakSwitch = true;
+                                        cout << "\nPlease enter your new address (no commas): ";
+                                        interuptCount = 0;
+                                        while (!CheckAddressValid(tempPatientData.patientAddress))
+                                        {
+                                            if (CheckInterupt(interuptCount)) { PressEnterToContinue(); return; }
+                                        }
+                                        break;
+
+                                    case 5:
+                                        breakSwitch = true;
+                                        cout << "\nHave you travelled overseas in the last 6 months (yes or no)?: ";
+                                        interuptCount = 0;
+                                        while (!CheckYesNoValid(tempPatientData.patientOverseasTravel))
+                                        {
+                                            if (CheckInterupt(interuptCount)) { PressEnterToContinue(); return; }
+                                        }
+                                        if (regex_match(tempPatientData.patientOverseasTravel, CORRECT_YES_FORMAT))
+                                        {
+                                            tempPatientData.patientOverseasTravel = "Yes";
+                                        }
+                                        else
+                                        {
+                                            tempPatientData.patientOverseasTravel = "No";
+                                        }
+                                        break;
+
+                                    case 6:
+                                        breakSwitch = true;
+                                        if (tempPatientData.patientStatus == "Alive")
+                                        {
+                                            tempPatientData.patientStatus = "Dead";
+                                        }
+                                        else
+                                        {
+                                            tempPatientData.patientStatus = "Alive";
+                                        }
+                                        break;
+
+                                    case 7:
+                                        breakSwitch = true;
+                                        //Exit
+                                        ifilePatientDB.close();
+                                        ofilePatientDBTemp.close();
+                                        remove("patientDBTemp.txt");
+                                        cout << "\nAll changes have been removed.\nReturning to main menu." << endl;
+                                        PressEnterToContinue();
+                                        return;
+
+                                    default:
+                                        cout << "Unknown selection, please try again.\n" << endl;
+                                    }
+                                }
+                            }
+                        }
+                        // Save to patient DB
+                        SaveNewPatientData(ofilePatientDBTemp,
+                            tempPatientData.patientID, tempPatientData.patientFirstName, tempPatientData.patientLastName, tempPatientData.patientAddress, tempPatientData.patientLocationVisited,
+                            tempPatientData.patientDOB, tempPatientData.patientDateVisited, tempPatientData.patientTimeVisited, tempPatientData.patientOverseasTravel, tempPatientData.patientTestResult, tempPatientData.patientStatus);
+                    }
+                    // !!!!!! - This is where the remaining lines of data are transfered to the temp file
+                    else
+                    {
+                        ofilePatientDBTemp << getRowLine << endl;
+                    }
+                }
+            }
+            if (patientMatch)
+            {
+                // Make temp file the new DB
+                allowContinue = true;
+                ifilePatientDB.close();
+                ofilePatientDBTemp.close();
+
+                remove("patientDB.txt"); //removing the previous database, then renaming the newly written and changing its name to replace the old.
+                rename("patientDBtemp.txt", "patientDB.txt"); // this must be changed if it works to "patientDB.txt"
+                cout << "\nYou've successfully updated the database." << endl;
+
+                PressEnterToContinue();
+
+            }
+            else
+            {
+                // Disregard temp file and tell user that the patient ID does not exist in the DB (try again?)
+
+                ifilePatientDB.close();
+                ofilePatientDBTemp.close();
+                remove("patientDBTemp.txt");
+                cout << "\n[] - The database is empty." << endl; // As required in PDF
+
+                // TELL USER / TRY A NEW SEARCH????
+                int selection(0);
+                cout << "\nThe patient ID " << tempPatientData.patientID << " does not exist in the database.\nPlease enter the number of the option you wish to select.\n1: Try again\n2: Return to main menu" << endl;
+                cout << "\n>> ";
+                interuptCount = 0;
+                while (selection != 1)
+                {
+                    if (CheckInterupt(interuptCount)) { ifilePatientDB.close(); PressEnterToContinue(); return; }
+                    while (!(cin >> selection)) // Prevents invalid inputs like letters, etc - MW
+                    {
+                        cin.clear();
+                        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+                        cout << "\nInvalid input.\n\nPlease enter the number of the option you wish to select.\n1: Try again\n2: Return to main menu" << endl;
+                        cout << "\n>> ";
+                    }
+                    switch (selection)
+                    {
+                    case 1:
+                        break;
+
+                    case 2:
+                        PressEnterToContinue();
+                        return;
+
+                    default:
+                        cout << "Unknown selection, please try again.\n" << endl;
+                    }
+                }
+            }
+        }
+    }
 }
 
 
@@ -507,16 +897,30 @@ void DisplayUpdatedLocation()
     string line;
     ifstream displayLocationsFile;
     displayLocationsFile.open("highRiskLocationsDB.txt");
-    if (displayLocationsFile.is_open()) 
-    { 
-    //    while (!displayLocationsFile.eof()) 
-    //    { 
-    //    cout << line << '\n'; 
-    //    }
-    cout << displayLocationsFile.rdbuf();
-    } 
-    cout << endl;
+    if (displayLocationsFile.fail())
+    {
+        cout << "\High Risk Locations Database Missing!\nPlease contact the application administrator on 555-123-456" << endl;
+        cout << "\nReturning to main menu.\n" << endl;
+        PressEnterToContinue();
+        return;
+    }
+
+    //Whilst the patient DB file is open
+    if (displayLocationsFile.is_open())
+    {
+        cout << "\nThe following locations are HIGH RISK:\n" << endl;
+        string getRowLine;
+        while (getline(displayLocationsFile, getRowLine))
+        {
+            if (!getRowLine.empty())
+            {
+                cout << "\t -> " << getRowLine << endl;
+            }
+        }
+    }
     displayLocationsFile.close();
+
+    PressEnterToContinue();
 }
 
 
@@ -1190,21 +1594,6 @@ void CovidTestRecommendationDetails()
 }
 
 
-/**
-* Simple function to print out the main menu instructions
-* @param none
-* @returns none
-*/
-void PrintMainMenu()
-{
-    cout << "\n1: Enter your details for COVID-Test Recommendation" << endl;
-    cout << "2: Submit your Covid test status & Update the location database" << endl;
-    cout << "3: Display the updated location (High Risk for COVID)" << endl;
-    cout << "4: Update COVID Patient Details" << endl;
-    cout << "5: Display the COVID Positive patient details" << endl;
-    cout << "6: Quit" << endl;
-    cout << "\n>> ";
-}
 
 /**
 * Main display loop that the user navigates through
@@ -1219,18 +1608,21 @@ void PrintMainMenu()
 void DisplayMenu()
 {
     int selection(0);
-
     while(selection != 6)
     {
         cout << "\nPlease enter the number of the option you wish to select." << endl;
-        PrintMainMenu();
-
+        cout << "\n1: Enter your details for COVID-Test Recommendation" << endl;
+        cout << "2: Submit your Covid test status & Update the location database" << endl;
+        cout << "3: Display the updated location (High Risk for COVID)" << endl;
+        cout << "4: Update COVID Patient Details" << endl;
+        cout << "5: Display the COVID Positive patient details" << endl;
+        cout << "6: Quit" << endl;
+        cout << "\n>> ";
         while (!(cin >> selection)) // Prevents invalid inputs like letters, etc - MW
         {
             cin.clear();
             cin.ignore(numeric_limits<streamsize>::max(), '\n');
-            cout << "\nInvalid input. Please try again." << endl;;
-            PrintMainMenu();
+            cout << "\nInvalid input. Please try again: ";
         }
         switch (selection)
         {
@@ -1258,7 +1650,7 @@ void DisplayMenu()
                 break;
 
             default: 
-                cout << "\nUnknown selection, please try again." << endl;
+                cout << "\nUnknown selection, please try again: ";
         }
   
     } 
