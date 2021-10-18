@@ -1567,12 +1567,23 @@ void CovidTestRecommendationDetails()
         {
             if (symptomsAnswers[0] || symptomsAnswers[1])
             {
-                cout << "Based on your answers, this program recommends that you DO need a COVID test!" << endl;
+                cout << "Please contact you local GP and advise you have many symptoms (including sever ones) so that they can best direct you!" << endl;
+            }
+            else
+            {
+                cout << "Please contact you local GP and advise you have sever symptoms so that they can bes direct you!" << endl;
             }
         }
         else
         {
-            // TODO: add more options (2-3 more)
+            if (!symptomsAnswers[0] && !symptomsAnswers[1])
+            {
+                cout << "Although you show no signs of infection, it is advised you maintain social distance!" << endl;
+            }
+            else
+            {
+                cout << "You show some signs of infection, it is advised you maintain social distance!" << endl;
+            }
         }
         newPatientData.patientTestResult = "Recomended (Pending)";
     }
